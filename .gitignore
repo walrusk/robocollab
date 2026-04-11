@@ -1,4 +1,4 @@
 .vscode
 .DS_Store
 
-scripts/.base-branch
+.ai/scripts/.base-branch
