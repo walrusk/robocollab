@@ -2,6 +2,20 @@
 
 A structured workflow for collaborating with AI coding agents in Cursor. It provides a set of commands, rules, and scripts that give you a repeatable process for planning, executing, and reviewing code changes with an agent.
 
+## Install
+
+Copy `install.sh` into the root of any repo and run it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/walrusk/robocollab/main/install.sh -o install.sh
+chmod +x install.sh
+./install.sh
+```
+
+The script will show you exactly what it's going to do and prompt for confirmation before making any changes. It copies the commands, rules, and scripts into your project and integrates entries into your `.gitignore`, `.cursorignore`, and `AGENTS.md` without overwriting existing content.
+
+You can delete `install.sh` after it completes.
+
 ## How It Works
 
 By default the agent will only discuss — it won't make code changes until you invoke a command. There are three workflows:
