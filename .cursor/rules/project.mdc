@@ -1,0 +1,16 @@
+---
+description: General project conventions and context
+alwaysApply: true
+---
+
+# Project Conventions
+
+## Repo Structure
+
+This project may be a git repo or a directory containing multiple git repos. When running `.ai/scripts/` commands, run them from within the repo where you intend to make changes. If a change spans multiple repos, confirm with the user which repo to target.
+
+## Skills
+
+When working in a React Native project:
+- Use the `$react-native-ui-lib` skill
+- When writing tests, use the `$react-native-testing` skill

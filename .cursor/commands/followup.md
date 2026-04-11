@@ -16,5 +16,5 @@ You are now in followup mode. We are making additional changes to an in-progress
 
 After making changes, always:
 
-1. Run `scripts/commit.sh "commit message"` to stage and commit.
-2. Run `scripts/push.sh` to push the updated branch.
+1. Run `.ai/scripts/commit.sh "commit message"` to stage and commit.
+2. Run `.ai/scripts/push.sh` to push the updated branch.

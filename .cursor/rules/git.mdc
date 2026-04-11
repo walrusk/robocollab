@@ -1,0 +1,22 @@
+---
+description: Rules for all git interactions in this repo
+alwaysApply: true
+---
+
+# Git Operations
+
+All git operations in this repo must go through the scripts in `.ai/scripts/`. Never run raw git commands (e.g. `git commit`, `git push`, `git checkout -b`) directly.
+
+## Available Scripts
+
+| Script | Purpose |
+|---|---|
+| `.ai/scripts/start.sh` | Check if we are on main/develop and ready for a new plan |
+| `.ai/scripts/branch.sh {name}` | Create a new feature branch |
+| `.ai/scripts/commit.sh "message"` | Stage all changes and commit |
+| `.ai/scripts/push.sh` | Push the current branch to origin |
+| `.ai/scripts/pr.sh <gh pr create args>` | Push and open a PR on GitHub |
+
+## Sandbox Permissions
+
+When asked about whitelisting commands to run without approval, ask about commands starting with `.ai/scripts`. These scripts should always be allowed to run outside the sandbox.
