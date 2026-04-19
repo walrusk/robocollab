@@ -5,10 +5,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_BRANCH_FILE="$SCRIPT_DIR/.base-branch"
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="$(rtk git rev-parse --abbrev-ref HEAD)"
 is_clean=true
 
-if [[ -n "$(git status --porcelain)" ]]; then
+if [[ -n "$(rtk git status --porcelain)" ]]; then
   is_clean=false
 fi
 

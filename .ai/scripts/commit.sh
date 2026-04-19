@@ -7,7 +7,7 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="$(rtk git rev-parse --abbrev-ref HEAD)"
 
 if [[ "$branch" == "develop" ]]; then
   echo "Error: refusing to commit on develop."
@@ -23,5 +23,5 @@ fi
 message="$1"
 
 # Stages all tracked/untracked changes, including dotfiles and deletions.
-git add --all
-git commit -m "$message"
+rtk git add --all
+rtk git commit -m "$message"

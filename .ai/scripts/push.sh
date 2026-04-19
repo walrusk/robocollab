@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="$(rtk git rev-parse --abbrev-ref HEAD)"
 
 if [[ "$branch" == "HEAD" ]]; then
   echo "Error: not on a branch."
@@ -19,4 +19,4 @@ if [[ "$branch" == "main" ]]; then
   exit 1
 fi
 
-git push --set-upstream origin "$branch"
+rtk git push --set-upstream origin "$branch"

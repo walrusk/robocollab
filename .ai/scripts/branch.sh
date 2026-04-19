@@ -8,4 +8,4 @@ if [[ $# -ne 1 ]]; then
 fi
 
 branch_name="$1"
-git checkout -b "$branch_name"
+rtk git checkout -b "$branch_name"

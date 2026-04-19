@@ -16,7 +16,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 base_branch="$(cat "$BASE_BRANCH_FILE")"
-branch="$(git rev-parse --abbrev-ref HEAD)"
+branch="$(rtk git rev-parse --abbrev-ref HEAD)"
 
 if [[ "$branch" == "HEAD" ]]; then
   echo "Error: not on a branch."
@@ -33,5 +33,5 @@ if [[ "$branch" == "main" ]]; then
   exit 1
 fi
 
-git push --set-upstream origin "$branch"
-gh pr create --head "$branch" --base "$base_branch" "$@"
+rtk git push --set-upstream origin "$branch"
+rtk gh pr create --head "$branch" --base "$base_branch" "$@"
