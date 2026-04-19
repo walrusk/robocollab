@@ -1,0 +1,116 @@
+# Robocollab git workflow backstop for Codex exec policy.
+#
+# These rules are intentionally narrower than the prose repo rules:
+# - Codex `.rules` files only govern commands requested outside the sandbox.
+# - Some intent-based policies cannot be encoded exactly, so this file focuses
+#   on high-value enforcement for wrapper usage and risky git operations.
+
+prefix_rule(
+    pattern = [[
+        ".ai/scripts/start.sh", "./.ai/scripts/start.sh",
+        ".ai/scripts/branch.sh", "./.ai/scripts/branch.sh",
+        ".ai/scripts/commit.sh", "./.ai/scripts/commit.sh",
+        ".ai/scripts/push.sh", "./.ai/scripts/push.sh",
+        ".ai/scripts/pr.sh", "./.ai/scripts/pr.sh",
+    ]],
+    decision = "allow",
+    justification = "These project wrapper scripts are the approved git workflow entry points.",
+    match = [
+        ".ai/scripts/start.sh",
+        "./.ai/scripts/branch.sh feature/example",
+        ".ai/scripts/commit.sh \"feat: add example\"",
+        "./.ai/scripts/push.sh",
+        ".ai/scripts/pr.sh --title Test --body Body",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "diff", "log", "rev-parse", "show"]],
+    decision = "allow",
+    justification = "These git commands are read-only inspection commands.",
+    match = [
+        "git status",
+        "git diff --stat",
+        "git log --oneline -5",
+        "git rev-parse --abbrev-ref HEAD",
+        "git show --stat HEAD~1",
+    ],
+)
+
+# `git branch` is not safe to allow broadly because it also covers mutating
+# forms such as `git branch -D ...`.
+prefix_rule(
+    pattern = ["git", "branch", ["--show-current", "--list"]],
+    decision = "allow",
+    justification = "These `git branch` forms are read-only.",
+    match = [
+        "git branch --show-current",
+        "git branch --list",
+        "git branch --list 'feature/*'",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["add", "commit", "push"]],
+    decision = "forbidden",
+    justification = "Use `.ai/scripts/commit.sh`, `.ai/scripts/push.sh`, or `.ai/scripts/pr.sh` instead so repo guardrails stay intact.",
+    match = [
+        "git add .",
+        "git commit -m test",
+        "git commit --amend -m test",
+        "git commit --no-verify -m test",
+        "git push",
+        "git push --set-upstream origin feature/example",
+        "git push --force-with-lease origin feature/example",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "-b"],
+    decision = "forbidden",
+    justification = "Use `.ai/scripts/branch.sh <branch-name>` instead of creating branches directly with git.",
+    match = [
+        "git checkout -b feature/example",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "switch", "-c"],
+    decision = "forbidden",
+    justification = "Use `.ai/scripts/branch.sh <branch-name>` instead of creating branches directly with git.",
+    match = [
+        "git switch -c feature/example",
+    ],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "create"],
+    decision = "forbidden",
+    justification = "Use `.ai/scripts/pr.sh <gh pr create args>` so the PR uses the recorded base branch and normal push flow.",
+    match = [
+        "gh pr create --title Test --body Body",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", [
+        "reset", "rebase", "config", "checkout", "switch", "merge",
+        "cherry-pick", "restore", "stash", "clean", "fetch", "pull",
+        "clone", "tag", "remote", "worktree", "submodule",
+    ]],
+    decision = "prompt",
+    justification = "This repo requires explicit approval for git operations that are not wrapper-based or explicitly read-only.",
+    match = [
+        "git reset --hard HEAD~1",
+        "git rebase origin/main",
+        "git config --get user.name",
+        "git checkout feature/example",
+        "git switch feature/example",
+        "git merge origin/main",
+        "git stash push -u",
+        "git clean -fd",
+        "git fetch origin",
+        "git pull --ff-only",
+        "git clone git@github.com:example/repo.git",
+    ],
+)
