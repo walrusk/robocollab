@@ -16,7 +16,7 @@ chmod +x install.sh
 
 The script announces exactly what it will do and prompts before making changes. It:
 
-- copies `.ai/scripts/`, `.ai/plans/`, `.claude/rules/`, `.cursor/rules/`, and `codex/rules/` into your repo (overwriting matching files);
+- copies `.ai/scripts/`, `.ai/plans/`, `.claude/rules/`, `.cursor/rules/`, and `.codex/rules/` into your repo (overwriting matching files);
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
 - prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`.
 
@@ -63,7 +63,7 @@ The agent edits the current branch directly and does not touch git — you handl
 └── settings.json          Claude Code permissions (denies reads of .env*)
 .cursor/
 └── rules/                 Cursor-native mirror of the Claude rules (alwaysApply)
-codex/
+.codex/
 └── rules/                 Codex exec-policy rules
 AGENTS.md                  Entry point: mode selection, critical rules, styleguide, git
 CLAUDE.md                  Imports AGENTS.md for Claude Code
@@ -77,7 +77,7 @@ Each runtime picks up its own rules:
 
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` in turn imports `.claude/rules/{discuss,collab,dev,followup}-mode.md` and `.claude/rules/git.md`.
 - **Cursor** reads `AGENTS.md` plus the `alwaysApply: true` `.mdc` files under `.cursor/rules/`. Those files mirror the Claude rules one-to-one so Cursor has the full mode and git rules loaded up front (Cursor does not follow Claude's `@path` imports).
-- **Codex** reads `AGENTS.md` for prose rules and enforces `codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing the wrapper scripts and read-only git, blocking raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
+- **Codex** reads `AGENTS.md` for prose rules and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing the wrapper scripts and read-only git, blocking raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
 - **Any other agent** that reads `AGENTS.md` gets the mode-selection prose, critical rules, styleguide, and git summary. For full detail it may read the files in `.claude/rules/` or `.cursor/rules/` on demand, but that's not guaranteed — prefer one of the runtimes above if you need strict enforcement.
 
 The Claude and Cursor rule sets are kept in sync by convention. If you edit one, mirror the change to the other.

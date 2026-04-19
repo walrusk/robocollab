@@ -128,7 +128,7 @@ item ".ai/scripts/        — Git operation scripts"
 item ".ai/plans/          — Plan file directory"
 item ".claude/rules/      — Claude Code rule files"
 item ".cursor/rules/      — Cursor rule files"
-item "codex/rules/        — Codex rule files"
+item ".codex/rules/       — Codex rule files"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
 item ".gitignore"
@@ -163,7 +163,7 @@ copy_tree "$SRC/.ai/scripts"   "$INSTALL_DIR/.ai/scripts"   ".ai/scripts/"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
 copy_tree "$SRC/.claude/rules" "$INSTALL_DIR/.claude/rules" ".claude/rules/"
 copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
-copy_tree "$SRC/codex/rules"   "$INSTALL_DIR/codex/rules"   "codex/rules/"
+copy_tree "$SRC/.codex/rules"  "$INSTALL_DIR/.codex/rules"  ".codex/rules/"
 
 if compgen -G "$INSTALL_DIR/.ai/scripts/*.sh" > /dev/null; then
   chmod +x "$INSTALL_DIR/.ai/scripts/"*.sh

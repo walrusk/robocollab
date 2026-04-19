@@ -1,5 +1,4 @@
 {
-  "plugins": ["expo"],
   "permissions": {
     "deny": [
       "Read(./.env)",
