@@ -1,10 +1,12 @@
 # RoboCollab
 
-A structured workflow for collaborating with AI coding agents in Cursor. It provides a set of commands, rules, and scripts that give you a repeatable process for planning, executing, and reviewing code changes with an agent.
+A structured workflow for collaborating with AI coding agents. It defines a small set of *modes*, a set of *rules* that agents load automatically, and *wrapper scripts* for the parts of git that have footguns — so you get a repeatable, predictable process for planning, executing, and reviewing changes with an agent.
+
+RoboCollab is runtime-agnostic: it ships agent-specific rule files for Claude Code and Codex, and a universal `AGENTS.md` that any agent that respects that convention (Cursor, GitHub Copilot, etc.) will read.
 
 ## Install
 
-Copy `install.sh` into the root of any repo and run it:
+Download `install.sh` into the root of your repo and run it:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/walrusk/robocollab/main/install.sh -o install.sh
@@ -12,58 +14,94 @@ chmod +x install.sh
 ./install.sh
 ```
 
-The script will show you exactly what it's going to do and prompt for confirmation before making any changes. It copies the commands, rules, and scripts into your project and integrates entries into your `.gitignore`, `.cursorignore`, and `AGENTS.md` without overwriting existing content.
+The script announces exactly what it will do and prompts before making changes. It:
 
-You can delete `install.sh` after it completes.
+- copies `.ai/scripts/`, `.ai/plans/`, `.claude/rules/`, `.cursor/rules/`, and `codex/rules/` into your repo (overwriting matching files);
+- line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
+- prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`.
 
-## How It Works
+After it finishes you can delete `install.sh`.
 
-By default the agent will only discuss — it won't make code changes until you invoke a command. There are three workflows:
+## How it works
 
-### `/dev` — Plan and execute a change
+Agents operate in one of four modes. **DISCUSS** is the default; the others are triggered by a short phrase at the start of your instruction (or entered automatically).
 
-Use this when starting new work. The agent will:
+### DISCUSS — default
 
-1. Check that you're on `main` or `develop` and ready for a new branch.
-2. Create a plan and present it for your review.
-3. Wait for you to say **"proceed"** before writing any code.
-4. Create a plan file in `.ai/plans/`, branch off, implement the change, and open a PR.
+Read-only. The agent discusses prospective changes but does not edit code or run mutating commands. Switches to DEV or COLLAB only when you explicitly ask.
 
-### `/followup` — Iterate on an open PR
+### DEV — planned change on a new branch
 
-Use this when you want to make additional changes to an in-progress feature branch. The agent will make the changes, keep the plan file in sync, commit, and push.
+Trigger with something like `"in dev mode, ..."` or `"dev. ..."`.
 
-### `/collab` — Pair-program
+The agent will:
 
-Use this when you want to work on the same branch together. The agent makes code changes directly and you handle git. If the agent notices a problem with something you wrote, it will mention it rather than silently changing it.
+1. Run `.ai/scripts/start.sh` to confirm you're on `main`/`develop` and clean.
+2. Draft a plan and present it for review. Iterate until you approve.
+3. When you say "proceed", write the plan to `.ai/plans/NNN_description.md`, create a branch via `.ai/scripts/branch.sh`, implement the change, commit, and open a PR.
 
-## Project Structure
+After the PR is opened, the agent auto-switches to FOLLOWUP.
+
+### FOLLOWUP — iterate on an open PR
+
+Entered automatically at the end of DEV. The agent makes follow-up edits on the same branch, keeps the plan file in `.ai/plans/` in sync, and commits/pushes via the scripts. Refuses to run on `main`/`develop`.
+
+### COLLAB — pair-program on the current branch
+
+Trigger with `"in collab mode, ..."` or `"collab. ..."`.
+
+The agent edits the current branch directly and does not touch git — you handle branches, commits, and pushes. If it notices a problem with something you wrote, it points it out rather than silently changing it.
+
+## Project layout
 
 ```
 .ai/
-├── plans/              # Plan files created during /dev workflows
-└── scripts/            # Git operation scripts (branch, commit, push, pr)
+├── plans/                 Plan files written during DEV mode
+└── scripts/               Git workflow wrappers (start, branch, commit, push, pr)
+.claude/
+├── rules/                 Per-mode rule files + git rule (for Claude Code)
+└── settings.json          Claude Code permissions (denies reads of .env*)
 .cursor/
-├── commands/           # Cursor slash commands (/dev, /followup, /collab)
-└── rules/              # Always-on rules (git policy, styleguide, project conventions)
+└── rules/                 Cursor-native mirror of the Claude rules (alwaysApply)
+codex/
+└── rules/                 Codex exec-policy rules
+AGENTS.md                  Entry point: mode selection, critical rules, styleguide, git
+CLAUDE.md                  Imports AGENTS.md for Claude Code
+.cursorignore              Blocks Cursor from reading .env* files
+.gitignore                 Base ignores for RoboCollab's own artifacts
 ```
 
 ## Rules
 
-Rules in `.cursor/rules/` are automatically applied to every agent conversation:
+Each runtime picks up its own rules:
 
-- **git** — All git operations must go through `.ai/scripts/`. No raw git commands.
-- **styleguide** — Coding conventions (component props, directory structure, UI patterns).
-- **project** — General project context (repo structure, skill usage).
+- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` in turn imports `.claude/rules/{discuss,collab,dev,followup}-mode.md` and `.claude/rules/git.md`.
+- **Cursor** reads `AGENTS.md` plus the `alwaysApply: true` `.mdc` files under `.cursor/rules/`. Those files mirror the Claude rules one-to-one so Cursor has the full mode and git rules loaded up front (Cursor does not follow Claude's `@path` imports).
+- **Codex** reads `AGENTS.md` for prose rules and enforces `codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing the wrapper scripts and read-only git, blocking raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
+- **Any other agent** that reads `AGENTS.md` gets the mode-selection prose, critical rules, styleguide, and git summary. For full detail it may read the files in `.claude/rules/` or `.cursor/rules/` on demand, but that's not guaranteed — prefer one of the runtimes above if you need strict enforcement.
+
+The Claude and Cursor rule sets are kept in sync by convention. If you edit one, mirror the change to the other.
 
 ## Scripts
 
-The scripts in `.ai/scripts/` manage the git lifecycle. They include safety checks (e.g. refusing to commit on `main` or `develop`).
+All scripts live in `.ai/scripts/` and wrap the git operations that have guardrails worth enforcing (no commits on `main`/`develop`, recorded base branch for PRs, etc.).
 
 | Script | Purpose |
 |---|---|
-| `start.sh` | Check readiness for a new plan |
-| `branch.sh {name}` | Create a feature branch |
+| `start.sh` | Check readiness for a new plan and record the base branch |
+| `branch.sh <name>` | Create and switch to a feature branch |
 | `commit.sh "message"` | Stage all changes and commit |
-| `push.sh` | Push the current branch |
-| `pr.sh <args>` | Push and open a PR (wraps `gh pr create`) |
+| `push.sh` | Push the current branch to `origin` |
+| `pr.sh <gh pr create args>` | Push and open a PR against the recorded base branch |
+
+Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine to use directly.
+
+## Sensitive files
+
+RoboCollab uses defense-in-depth for `.env`, `.env.*`, and `.envrc`:
+
+- a soft rule in `AGENTS.md` tells every agent not to read or reference them;
+- `.cursorignore` hard-blocks Cursor;
+- `.claude/settings.json` adds matching `permissions.deny` entries for Claude Code.
+
+If you use other agent runtimes (Gemini Code Assist, JetBrains AI, Codeium, Continue, etc.), add their equivalent ignore file with the same patterns.
