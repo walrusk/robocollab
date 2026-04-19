@@ -2,9 +2,10 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/walrusk/robocollab.git"
+REPO_URL="${ROBOCOLLAB_REPO_URL:-https://github.com/walrusk/robocollab.git}"
 TMP_DIR=".robocollab-install"
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$INSTALL_DIR/$TMP_DIR"
 
 # --- Helpers ---
 
@@ -22,14 +23,40 @@ confirm() {
   esac
 }
 
-# Append lines from a source file into a target file, skipping duplicates.
-# Creates the target file if it doesn't exist.
-integrate_file() {
+# Copy a source directory's contents into a destination directory, creating the
+# destination if needed. Existing files in the destination are overwritten.
+copy_tree() {
   local src="$1"
   local dest="$2"
+  local label="$3"
+
+  if [[ ! -d "$src" ]]; then
+    warn "Source missing: $src (skipping $label)"
+    return
+  fi
+
+  mkdir -p "$dest"
+  # Copy contents (including dotfiles) without nesting src inside dest.
+  cp -R "$src/." "$dest/"
+  item "$label"
+}
+
+# Append lines from src into dest, skipping duplicates. Creates dest from src if
+# it doesn't exist. Intended for simple line-oriented files like .gitignore.
+integrate_lines() {
+  local src="$1"
+  local dest="$2"
+  local label
+  label="$(basename "$dest")"
+
+  if [[ ! -f "$src" ]]; then
+    warn "Source missing: $src (skipping $label)"
+    return
+  fi
 
   if [[ ! -f "$dest" ]]; then
     cp "$src" "$dest"
+    item "$label (created)"
     return
   fi
 
@@ -43,33 +70,47 @@ integrate_file() {
   done < "$src"
 
   if [[ $added -gt 0 ]]; then
-    item "Added $added new line(s) to $(basename "$dest")"
+    item "$label (added $added new line(s))"
   else
-    item "$(basename "$dest") already up to date"
+    item "$label (already up to date)"
   fi
 }
 
-# Append content from a source file into a target file, separated by a blank
-# line. If the target doesn't exist, copies the source as-is. If the target
-# already contains a marker line from the source, skips the integration.
-integrate_block() {
+# Copy src to dest. If dest exists, prompt the user to overwrite or skip — do
+# not attempt to merge structured content.
+# $3 is a short label for output (defaults to basename of dest).
+# $4 is the relative path inside the source repo used in the skip message.
+copy_or_prompt() {
   local src="$1"
   local dest="$2"
-  local marker="$3"
+  local label="${3:-$(basename "$dest")}"
+  local rel="${4:-$label}"
 
-  if [[ ! -f "$dest" ]]; then
-    cp "$src" "$dest"
+  if [[ ! -f "$src" ]]; then
+    warn "Source missing: $src (skipping $label)"
     return
   fi
 
-  if grep -qF "$marker" "$dest"; then
-    item "$(basename "$dest") already contains RoboCollab content"
+  if [[ -e "$dest" ]]; then
+    local answer=""
+    printf "  \033[0;33m?\033[0m %s already exists. Overwrite? [y/N] " "$label"
+    read -r answer
+    case "$answer" in
+      [yY]|[yY][eE][sS])
+        mkdir -p "$(dirname "$dest")"
+        cp "$src" "$dest"
+        item "$label (overwritten)"
+        ;;
+      *)
+        warn "$label left unchanged. Compare against $rel in $REPO_URL and merge manually if needed."
+        ;;
+    esac
     return
   fi
 
-  printf "\n" >> "$dest"
-  cat "$src" >> "$dest"
-  item "Appended RoboCollab content to $(basename "$dest")"
+  mkdir -p "$(dirname "$dest")"
+  cp "$src" "$dest"
+  item "$label (created)"
 }
 
 # --- Announce ---
@@ -82,16 +123,20 @@ echo ""
 echo "It will:"
 item "Clone $REPO_URL into a temporary directory"
 echo ""
-info "Copy these directories (creating them if needed):"
-item ".ai/plans/          — Plan file directory (empty)"
+info "Copy these directories (overwriting matching files):"
 item ".ai/scripts/        — Git operation scripts"
-item ".cursor/commands/   — Cursor slash commands (/dev, /followup, /collab)"
-item ".cursor/rules/      — Always-on agent rules"
+item ".ai/plans/          — Plan file directory"
+item ".claude/rules/      — Claude Code rule files"
+item "codex/rules/        — Codex rule files"
 echo ""
-info "Integrate into existing files (or create if missing):"
-item ".gitignore          — Add entries line-by-line, skipping duplicates"
-item ".cursorignore       — Add entries line-by-line, skipping duplicates"
-item "AGENTS.md           — Append RoboCollab agent instructions"
+info "Merge into existing files line-by-line (or create if missing):"
+item ".gitignore"
+item ".cursorignore"
+echo ""
+info "Copy these files (prompt to overwrite if they already exist):"
+item "AGENTS.md"
+item "CLAUDE.md"
+item ".claude/settings.json"
 echo ""
 info "Clean up:"
 item "Remove the temporary directory"
@@ -102,64 +147,51 @@ confirm
 
 info "Cloning RoboCollab..."
 
-if [[ -d "$INSTALL_DIR/$TMP_DIR" ]]; then
-  rm -rf "$INSTALL_DIR/$TMP_DIR"
+if [[ -d "$SRC" ]]; then
+  rm -rf "$SRC"
 fi
 
-git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR/$TMP_DIR"
+git clone --quiet --depth 1 "$REPO_URL" "$SRC"
 ok "Done."
 
 # --- Copy directories ---
 
-info "Copying files..."
+info "Copying directories..."
 
-mkdir -p "$INSTALL_DIR/.ai/plans"
-mkdir -p "$INSTALL_DIR/.ai/scripts"
-mkdir -p "$INSTALL_DIR/.cursor/commands"
-mkdir -p "$INSTALL_DIR/.cursor/rules"
+copy_tree "$SRC/.ai/scripts"   "$INSTALL_DIR/.ai/scripts"   ".ai/scripts/"
+copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
+copy_tree "$SRC/.claude/rules" "$INSTALL_DIR/.claude/rules" ".claude/rules/"
+copy_tree "$SRC/codex/rules"   "$INSTALL_DIR/codex/rules"   "codex/rules/"
 
-for f in "$INSTALL_DIR/$TMP_DIR/.ai/scripts/"*.sh; do
-  cp "$f" "$INSTALL_DIR/.ai/scripts/"
-  item "$(basename "$f")"
-done
-
-for f in "$INSTALL_DIR/$TMP_DIR/.cursor/commands/"*.md; do
-  cp "$f" "$INSTALL_DIR/.cursor/commands/"
-  item "$(basename "$f")"
-done
-
-for f in "$INSTALL_DIR/$TMP_DIR/.cursor/rules/"*.mdc; do
-  cp "$f" "$INSTALL_DIR/.cursor/rules/"
-  item "$(basename "$f")"
-done
-
-chmod +x "$INSTALL_DIR/.ai/scripts/"*.sh
+if compgen -G "$INSTALL_DIR/.ai/scripts/*.sh" > /dev/null; then
+  chmod +x "$INSTALL_DIR/.ai/scripts/"*.sh
+fi
 
 ok "Done."
 
-# --- Integrate files ---
+# --- Integrate line-based files ---
 
-info "Integrating config files..."
+info "Merging ignore files..."
 
-integrate_file \
-  "$INSTALL_DIR/$TMP_DIR/.gitignore" \
-  "$INSTALL_DIR/.gitignore"
+integrate_lines "$SRC/.gitignore"    "$INSTALL_DIR/.gitignore"
+integrate_lines "$SRC/.cursorignore" "$INSTALL_DIR/.cursorignore"
 
-integrate_file \
-  "$INSTALL_DIR/$TMP_DIR/.cursorignore" \
-  "$INSTALL_DIR/.cursorignore"
+ok "Done."
 
-integrate_block \
-  "$INSTALL_DIR/$TMP_DIR/AGENTS.md" \
-  "$INSTALL_DIR/AGENTS.md" \
-  "## Commands"
+# --- Copy-if-missing files ---
+
+info "Installing top-level files..."
+
+copy_or_prompt "$SRC/AGENTS.md"              "$INSTALL_DIR/AGENTS.md"              "AGENTS.md"              "AGENTS.md"
+copy_or_prompt "$SRC/CLAUDE.md"              "$INSTALL_DIR/CLAUDE.md"              "CLAUDE.md"              "CLAUDE.md"
+copy_or_prompt "$SRC/.claude/settings.json"  "$INSTALL_DIR/.claude/settings.json"  ".claude/settings.json"  ".claude/settings.json"
 
 ok "Done."
 
 # --- Clean up ---
 
 info "Cleaning up..."
-rm -rf "$INSTALL_DIR/$TMP_DIR"
+rm -rf "$SRC"
 ok "Done."
 
 # --- Finish ---
@@ -167,6 +199,6 @@ ok "Done."
 info "RoboCollab installed successfully!"
 echo ""
 echo "Next steps:"
-item "Open this project in Cursor"
-item "Type /dev in chat to start your first planned change"
+item "Review any files reported as 'left unchanged' and merge manually if needed."
+item "Open this project in your agent of choice and try DEV mode."
 echo ""
