@@ -8,7 +8,7 @@ BASE_BRANCH_FILE="$SCRIPT_DIR/.base-branch"
 branch="$(rtk git rev-parse --abbrev-ref HEAD)"
 is_clean=true
 
-if [[ -n "$(rtk git status --porcelain)" ]]; then
+if [[ -n "$(git status --porcelain)" ]]; then
   is_clean=false
 fi
 
