@@ -5,6 +5,7 @@ set -euo pipefail
 REPO_URL="${ROBOCOLLAB_REPO_URL:-https://github.com/walrusk/robocollab.git}"
 TMP_DIR=".robocollab-install"
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="$INSTALL_DIR/$(basename "${BASH_SOURCE[0]}")"
 SRC="$INSTALL_DIR/$TMP_DIR"
 
 # --- Helpers ---
@@ -247,3 +248,11 @@ echo "Next steps:"
 item "Review any files reported as 'left unchanged' and merge manually if needed."
 item "Open this project in your agent of choice and try DEV mode."
 echo ""
+
+if prompt_yes_no "Delete this installer script ($SCRIPT_PATH)?" "y/N"; then
+  if rm -- "$SCRIPT_PATH"; then
+    ok "Installer script deleted."
+  else
+    warn "Could not delete $SCRIPT_PATH."
+  fi
+fi
