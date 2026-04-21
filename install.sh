@@ -14,13 +14,53 @@ item()  { printf "  \033[0;36m•\033[0m %s\n" "$1"; }
 warn()  { printf "  \033[0;33m⚠\033[0m %s\n" "$1"; }
 ok()    { printf "\033[1;32m%s\033[0m\n" "$1"; }
 
-confirm() {
-  printf "\n\033[1;33mProceed? [y/N]\033[0m "
+prompt_yes_no() {
+  local prompt="$1"
+  local default="${2:-N}"
+  local answer
+
+  printf "\n\033[1;33m%s [%s]\033[0m " "$prompt" "$default"
   read -r answer
+
   case "$answer" in
     [yY]|[yY][eE][sS]) return 0 ;;
-    *) echo "Aborted."; exit 1 ;;
+    *) return 1 ;;
   esac
+}
+
+confirm() {
+  if ! prompt_yes_no "Proceed?" "y/N"; then
+    echo "Aborted."
+    exit 1
+  fi
+}
+
+ensure_rtk() {
+  if command -v rtk >/dev/null 2>&1; then
+    item "rtk is already installed"
+    return
+  fi
+
+  warn "rtk is not installed."
+
+  if ! prompt_yes_no "Install rtk with Homebrew?" "y/N"; then
+    warn "Continuing without rtk."
+    return
+  fi
+
+  if ! command -v brew >/dev/null 2>&1; then
+    warn "Homebrew is not installed, so rtk cannot be installed automatically."
+    warn "Install Homebrew first, then run: brew install rtk"
+    return
+  fi
+
+  info "Installing rtk..."
+  brew install rtk
+  ok "rtk installed."
+
+  info "Initializing rtk..."
+  rtk init -g
+  ok "rtk initialized."
 }
 
 # Copy a source directory's contents into a destination directory, creating the
@@ -116,6 +156,7 @@ copy_or_prompt() {
 # --- Announce ---
 
 info "RoboCollab Installer"
+ensure_rtk
 echo ""
 echo "This script will install the RoboCollab workflow into:"
 echo "  $INSTALL_DIR"
@@ -128,6 +169,7 @@ item ".ai/scripts/        — Git operation scripts"
 item ".ai/plans/          — Plan file directory"
 item ".claude/rules/      — Claude Code rule files"
 item ".cursor/rules/      — Cursor rule files"
+item ".cursor/skills/     — Cursor skill files"
 item ".codex/rules/       — Codex rule files"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
@@ -163,6 +205,7 @@ copy_tree "$SRC/.ai/scripts"   "$INSTALL_DIR/.ai/scripts"   ".ai/scripts/"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
 copy_tree "$SRC/.claude/rules" "$INSTALL_DIR/.claude/rules" ".claude/rules/"
 copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
+copy_tree "$SRC/.cursor/skills" "$INSTALL_DIR/.cursor/skills" ".cursor/skills/"
 copy_tree "$SRC/.codex/rules"  "$INSTALL_DIR/.codex/rules"  ".codex/rules/"
 
 if compgen -G "$INSTALL_DIR/.ai/scripts/*.sh" > /dev/null; then
