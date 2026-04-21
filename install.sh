@@ -82,6 +82,36 @@ copy_tree() {
   item "$label"
 }
 
+sync_git_wrapper() {
+  local src_dir="$1"
+  local dest_dir="$2"
+  local src_git="$src_dir/git.sh"
+  local dest_git="$dest_dir/git.sh"
+  local legacy_script
+  local removed_any=false
+
+  if [[ ! -f "$src_git" ]]; then
+    warn "Source missing: $src_git (skipping .ai/scripts/git.sh)"
+    return
+  fi
+
+  mkdir -p "$dest_dir"
+  cp "$src_git" "$dest_git"
+  chmod +x "$dest_git"
+  item ".ai/scripts/git.sh"
+
+  for legacy_script in start.sh branch.sh commit.sh push.sh pr.sh; do
+    if [[ -e "$dest_dir/$legacy_script" ]]; then
+      rm -f "$dest_dir/$legacy_script"
+      removed_any=true
+    fi
+  done
+
+  if [[ "$removed_any" == true ]]; then
+    item ".ai/scripts/ legacy shims removed"
+  fi
+}
+
 # Append lines from src into dest, skipping duplicates. Creates dest from src if
 # it doesn't exist. Intended for simple line-oriented files like .gitignore.
 integrate_lines() {
@@ -166,7 +196,7 @@ echo "It will:"
 item "Clone $REPO_URL into a temporary directory"
 echo ""
 info "Copy these directories (overwriting matching files):"
-item ".ai/scripts/        — Git operation scripts"
+item ".ai/scripts/git.sh  — Canonical git workflow wrapper"
 item ".ai/plans/          — Plan file directory"
 item ".claude/rules/      — Claude Code rule files"
 item ".cursor/rules/      — Cursor rule files"
@@ -202,16 +232,12 @@ ok "Done."
 
 info "Copying directories..."
 
-copy_tree "$SRC/.ai/scripts"   "$INSTALL_DIR/.ai/scripts"   ".ai/scripts/"
+sync_git_wrapper "$SRC/.ai/scripts" "$INSTALL_DIR/.ai/scripts"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
 copy_tree "$SRC/.claude/rules" "$INSTALL_DIR/.claude/rules" ".claude/rules/"
 copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
 copy_tree "$SRC/.cursor/skills" "$INSTALL_DIR/.cursor/skills" ".cursor/skills/"
 copy_tree "$SRC/.codex/rules"  "$INSTALL_DIR/.codex/rules"  ".codex/rules/"
-
-if compgen -G "$INSTALL_DIR/.ai/scripts/*.sh" > /dev/null; then
-  chmod +x "$INSTALL_DIR/.ai/scripts/"*.sh
-fi
 
 ok "Done."
 

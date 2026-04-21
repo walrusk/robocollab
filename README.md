@@ -36,9 +36,9 @@ Trigger with something like `"in dev mode, ..."` or `"dev. ..."`.
 
 The agent will:
 
-1. Run `.ai/scripts/start.sh` to confirm you're on `main`/`develop` and clean.
+1. Run `.ai/scripts/git.sh start` to confirm you're on `main`/`develop` and clean.
 2. Draft a plan and present it for review. Iterate until you approve.
-3. When you say "proceed", write the plan to `.ai/plans/NNN_description.md`, create a branch via `.ai/scripts/branch.sh`, implement the change, commit, and open a PR.
+3. When you say "proceed", write the plan to `.ai/plans/NNN_description.md`, create a branch via `.ai/scripts/git.sh branch`, implement the change, commit, and open a PR.
 
 After the PR is opened, the agent auto-switches to FOLLOWUP.
 
@@ -57,7 +57,7 @@ The agent edits the current branch directly and does not touch git — you handl
 ```
 .ai/
 ├── plans/                 Plan files written during DEV mode
-└── scripts/               Git workflow wrappers (start, branch, commit, push, pr)
+└── scripts/               Canonical git workflow wrapper plus compatibility shims
 .claude/
 ├── rules/                 Per-mode rule files + git rule (for Claude Code)
 └── settings.json          Claude Code permissions (denies reads of .env*)
@@ -77,22 +77,22 @@ Each runtime picks up its own rules:
 
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` in turn imports `.claude/rules/{discuss,collab,dev,followup}-mode.md` and `.claude/rules/git.md`.
 - **Cursor** reads `AGENTS.md` plus the `alwaysApply: true` `.mdc` files under `.cursor/rules/`. Those files mirror the Claude rules one-to-one so Cursor has the full mode and git rules loaded up front (Cursor does not follow Claude's `@path` imports).
-- **Codex** reads `AGENTS.md` for prose rules and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing the wrapper scripts and read-only git, blocking raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
+- **Codex** reads `AGENTS.md` for prose rules and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only git, blocking legacy shim escalation plus raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
 - **Any other agent** that reads `AGENTS.md` gets the mode-selection prose, critical rules, styleguide, and git summary. For full detail it may read the files in `.claude/rules/` or `.cursor/rules/` on demand, but that's not guaranteed — prefer one of the runtimes above if you need strict enforcement.
 
 The Claude and Cursor rule sets are kept in sync by convention. If you edit one, mirror the change to the other.
 
 ## Scripts
 
-All scripts live in `.ai/scripts/` and wrap the git operations that have guardrails worth enforcing (no commits on `main`/`develop`, recorded base branch for PRs, etc.).
+All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entrypoint and wraps the git operations that have guardrails worth enforcing (no commits on `main`/`develop`, recorded base branch for PRs, etc.). The older per-action scripts remain as compatibility shims that forward to `git.sh`.
 
 | Script | Purpose |
 |---|---|
-| `start.sh` | Check readiness for a new plan and record the base branch |
-| `branch.sh <name>` | Create and switch to a feature branch |
-| `commit.sh "message"` | Stage all changes and commit |
-| `push.sh` | Push the current branch to `origin` |
-| `pr.sh <gh pr create args>` | Push and open a PR against the recorded base branch |
+| `git.sh start` | Check readiness for a new plan and record the base branch |
+| `git.sh branch <name>` | Create and switch to a feature branch |
+| `git.sh commit "message"` | Stage all changes and commit |
+| `git.sh push` | Push the current branch to `origin` |
+| `git.sh pr <gh pr create args>` | Push and open a PR against the recorded base branch |
 
 Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine to use directly.
 

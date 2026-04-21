@@ -43,4 +43,4 @@ You are always in exactly one mode. The default is DISCUSS. You leave DISCUSS on
 
 ## Git
 
-See @.claude/rules/git.md for the full rules. Summary: prefer `.ai/scripts/` wrappers (`start.sh`, `branch.sh`, `commit.sh`, `push.sh`, `pr.sh`) over raw git for any operation they cover, and if one needs to run outside the sandbox request approval with the shared `.ai/scripts` prefix so the user can whitelist the whole wrapper set at once. Read-only git is fine. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.
+See @.claude/rules/git.md for the full rules. Summary: prefer the single `.ai/scripts/git.sh <action>` wrapper (`start`, `branch`, `commit`, `push`, `pr`) over raw git for any operation it covers. The legacy per-action scripts remain as compatibility shims, but new instructions should use `.ai/scripts/git.sh` so outside-sandbox approval can be whitelisted once. Read-only git is fine. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.

@@ -7,14 +7,31 @@
 
 prefix_rule(
     pattern = [[
-        ".ai/scripts", "./.ai/scripts",
+        ".ai/scripts/git.sh", "./.ai/scripts/git.sh",
     ]],
     decision = "allow",
-    justification = "These project wrapper scripts are the approved git workflow entry points, and the shared prefix lets the whole wrapper directory be whitelisted in one approval.",
+    justification = "This single project wrapper entrypoint is the approved git workflow surface, and one approval covers all supported subcommands.",
+    match = [
+        ".ai/scripts/git.sh start",
+        "./.ai/scripts/git.sh branch feature/example",
+        ".ai/scripts/git.sh commit \"feat: add example\"",
+        "./.ai/scripts/git.sh push",
+        ".ai/scripts/git.sh pr --title Test --body Body",
+    ],
+)
+
+prefix_rule(
+    pattern = [[
+        ".ai/scripts/start.sh", "./.ai/scripts/start.sh",
+        ".ai/scripts/branch.sh", "./.ai/scripts/branch.sh",
+        ".ai/scripts/commit.sh", "./.ai/scripts/commit.sh",
+        ".ai/scripts/push.sh", "./.ai/scripts/push.sh",
+        ".ai/scripts/pr.sh", "./.ai/scripts/pr.sh",
+    ]],
+    decision = "forbidden",
+    justification = "Use `.ai/scripts/git.sh <subcommand>` so one outside-sandbox approval covers the full wrapper workflow.",
     match = [
         ".ai/scripts/start.sh",
-        "./.ai/scripts/start.sh",
-        ".ai/scripts/branch.sh feature/example",
         "./.ai/scripts/branch.sh feature/example",
         ".ai/scripts/commit.sh \"feat: add example\"",
         "./.ai/scripts/push.sh",
@@ -51,7 +68,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["git", ["add", "commit", "push"]],
     decision = "forbidden",
-    justification = "Use `.ai/scripts/commit.sh`, `.ai/scripts/push.sh`, or `.ai/scripts/pr.sh` instead so repo guardrails stay intact.",
+    justification = "Use `.ai/scripts/git.sh commit`, `.ai/scripts/git.sh push`, or `.ai/scripts/git.sh pr` instead so repo guardrails stay intact.",
     match = [
         "git add .",
         "git commit -m test",
@@ -66,7 +83,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["git", "checkout", "-b"],
     decision = "forbidden",
-    justification = "Use `.ai/scripts/branch.sh <branch-name>` instead of creating branches directly with git.",
+    justification = "Use `.ai/scripts/git.sh branch <branch-name>` instead of creating branches directly with git.",
     match = [
         "git checkout -b feature/example",
     ],
@@ -75,7 +92,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["git", "switch", "-c"],
     decision = "forbidden",
-    justification = "Use `.ai/scripts/branch.sh <branch-name>` instead of creating branches directly with git.",
+    justification = "Use `.ai/scripts/git.sh branch <branch-name>` instead of creating branches directly with git.",
     match = [
         "git switch -c feature/example",
     ],
@@ -84,7 +101,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["gh", "pr", "create"],
     decision = "forbidden",
-    justification = "Use `.ai/scripts/pr.sh <gh pr create args>` so the PR uses the recorded base branch and normal push flow.",
+    justification = "Use `.ai/scripts/git.sh pr <gh pr create args>` so the PR uses the recorded base branch and normal push flow.",
     match = [
         "gh pr create --title Test --body Body",
     ],
