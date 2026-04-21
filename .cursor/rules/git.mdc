@@ -26,11 +26,12 @@ Before running any git command, check whether one of the wrappers covers your in
 
 1. Prefix raw shell commands with `rtk` (git, gh, other tools). Do not prefix `.ai/scripts/...` invocations — they call `rtk` internally.
 2. Never run `git add`, `git commit`, `git push`, `git checkout -b`, or `gh pr create` directly when a wrapper script covers the intent. Always use the script.
-3. Read-only git commands (e.g. `git status`, `git diff`, `git log`, `git rev-parse`, `git branch`) are fine to run directly — still via `rtk`, e.g. `rtk git status`.
-4. Never force push, reset, rebase, or amend unless the user explicitly asks for it.
-5. Never run `git commit --no-verify` or otherwise skip hooks.
-6. Never modify git config.
-7. If you need a git operation not covered by a script and not listed as always-safe above, stop and ask the user before running it.
+3. If a `.ai/scripts/...` invocation needs to run outside the sandbox, request approval with the shared `.ai/scripts` prefix rule rather than a script-specific path such as `.ai/scripts/start.sh`. In tool terms, prefer `prefix_rule=[".ai/scripts"]` so the user can whitelist the whole wrapper directory in one go.
+4. Read-only git commands (e.g. `git status`, `git diff`, `git log`, `git rev-parse`, `git branch`) are fine to run directly — still via `rtk`, e.g. `rtk git status`.
+5. Never force push, reset, rebase, or amend unless the user explicitly asks for it.
+6. Never run `git commit --no-verify` or otherwise skip hooks.
+7. Never modify git config.
+8. If you need a git operation not covered by a script and not listed as always-safe above, stop and ask the user before running it.
 
 ## rtk meta commands
 
