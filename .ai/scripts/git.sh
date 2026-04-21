@@ -41,7 +41,7 @@ cmd_start() {
   branch="$(current_branch)"
   local is_clean=true
 
-  if [[ -n "$(rtk git status --porcelain)" ]]; then
+  if [[ -n "$(git status --porcelain)" ]]; then
     is_clean=false
   fi
 
