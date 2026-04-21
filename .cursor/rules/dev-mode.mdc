@@ -35,4 +35,5 @@ Begin your initial response by stating that you are in DEV mode.
 
 1. Run `.ai/scripts/commit.sh "commit message"` to add and commit all changes on your branch.
 2. Run `.ai/scripts/pr.sh` to push the branch and open a PR. It takes the same args as `gh pr create`. Include a short PR description with bullet points if applicable.
-3. You are now in FOLLOWUP mode. Follow the FOLLOWUP mode rules from here on.
+3. Do not ask the user whether you should create the PR. Opening the PR is part of the standard DEV mode flow, so do it automatically unless the user explicitly tells you not to open one.
+4. You are now in FOLLOWUP mode. Follow the FOLLOWUP mode rules from here on.
