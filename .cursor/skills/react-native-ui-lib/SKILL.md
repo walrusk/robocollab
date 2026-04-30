@@ -7,11 +7,7 @@ description: >
   For more complex styling use StyleSheet or inline style as normal.
 
   Below are the exact contents of the docs for Modifiers found online in
-  the react-native-ui-lib docs. You can reference them here instead of requesting
-  them every time.
-
-  For other information you may need about react-native-ui-lib the docs
-  are located here: https://wix.github.io/react-native-ui-lib/docs/getting-started/setup
+  the react-native-ui-lib docs.
 ---
 
 Discover the power of our style presets transformed into modifiers.  

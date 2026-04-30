@@ -1,46 +1,39 @@
 # Agents
 
-This file is the entry point for agent behavior in this project. It defines how you pick a working mode, the rules that always apply, the project styleguide, and how to interact with git. Each mode has its own rule file, imported below.
+This file is the always-loaded entry point for agent behavior in this project. Keep it compact: it defines the sticky mode router, references the always-loaded styleguide, and gives a short git summary. Detailed mode instructions live in `.ai/modes/`; workflow policies live in `.ai/workflows/`. Read those files only when they apply.
 
-## Mode selection
+## Mode router
 
-You are always in exactly one mode. The default is DISCUSS. You leave DISCUSS only under the conditions in the rules below.
+You are always in exactly one mode. Treat the current mode as conversation state: once a mode is active, the user does not need to repeat it on every prompt.
 
-1. You will be in DISCUSS mode unless one of the following is true:
-   1. The user explicitly asks for COLLAB or DEV mode. The mode must be named exactly, and the phrasing should match or be very close to one of:
-      - `"in collab mode ..."`
-      - `"collab mode, ..."`
-      - `"collab. ..."`
-      (same shape applies to `dev`).
-   2. You have just finished the initial round of changes in DEV mode — you then auto-switch into FOLLOWUP mode.
-2. DISCUSS, COLLAB, and FOLLOWUP modes are continuous. Stay in them across turns until the user switches you back to DISCUSS or DEV.
-3. User-provided text is input for the mode you are currently in. Do not switch modes on implicit cues — only on the conditions above.
+1. The default mode for a fresh session is DISCUSS.
+2. Switch modes only when the newest user message explicitly begins with one of these triggers:
+   - `discuss.`, `discuss mode,`, or `in discuss mode`
+   - `collab.`, `collab mode,`, or `in collab mode`
+   - `dev.`, `dev mode,`, or `in dev mode`
+   - `followup.`, `followup mode,`, or `in followup mode`
+3. When a trigger appears, switch modes before interpreting the rest of the user message as work for that mode.
+4. DISCUSS, COLLAB, and FOLLOWUP are sticky. Stay in the active mode until the user explicitly switches modes.
+5. DEV is sticky until the initial planned change has been executed and the pull request has been opened. After the PR is opened successfully, automatically switch to FOLLOWUP.
+6. When entering a mode, read only that mode's file from `.ai/modes/`:
+   - DISCUSS: `.ai/modes/discuss.md`
+   - COLLAB: `.ai/modes/collab.md`
+   - DEV: `.ai/modes/dev.md`
+   - FOLLOWUP: `.ai/modes/followup.md`
+7. Do not read inactive mode files. Read `.ai/workflows/git.md` only when the active task requires git workflow details.
+8. After context compaction or a resumed conversation, preserve the current mode, active branch, active plan file, and whether DEV has already opened its PR. If the active mode file is no longer in context, re-read that one file. If the state is genuinely unrecoverable, default to DISCUSS and say so briefly.
 
 ## Available modes
 
-- **DISCUSS** (default) — no code changes; discuss and refine prospective work. See @.claude/rules/discuss-mode.md.
-- **COLLAB** — live edits on the current branch while the user also edits in parallel; user handles git. See @.claude/rules/collab-mode.md.
-- **DEV** — planned change on a new branch, ending in a PR. See @.claude/rules/dev-mode.md.
-- **FOLLOWUP** — additional changes on an active plan branch after the DEV PR is open. Entered automatically from DEV. See @.claude/rules/followup-mode.md.
-
-## Important rules and reminders
-
-### Critical rules
-
-1. Never read, display, or reference the contents of `.env`, `.envrc`, or `.env.local`.
-2. If you are not in DISCUSS mode, begin your initial response by stating which mode you are in. You are always in exactly one mode from the list above.
-3. Always follow the rules of your current mode.
-4. Follow the styleguide below. Also stick to existing project conventions where reasonable.
+- **DISCUSS** (default) - no code changes; discuss and refine prospective work.
+- **COLLAB** - live edits on the current branch while the user also edits in parallel; user handles git.
+- **DEV** - planned change on a new branch, ending in a PR.
+- **FOLLOWUP** - additional changes on an active plan branch after the DEV PR is open. Entered automatically from DEV.
 
 ## Styleguide
 
-1. Follow these guidelines silently. Do not mention them in plans.
-2. Write code that is elegant and optimized for readability and maintainability.
-3. Avoid tiny wrapping functions unless they are genuinely reusable.
-4. For React components, use `type Props = {}` for props rather than giving the type a component-specific name.
-5. Keep the directory structure fairly flat. Where folders are needed, make them domain-based (prefer `domain/controllers.ts` or `domain/repo.ts` over `controllers/domain-controller.ts` or `repos/domain-controller.ts`). The one exception is types: new types go in the existing contextual `types.ts` file.
-6. For flex / padding / margin styling on `View` and `Text` from `@/components/ui`, follow the modifier guide at https://wix.github.io/react-native-ui-lib/docs/foundation/modifiers.
+Read and follow @STYLEGUIDE.md as part of the always-loaded project instructions.
 
 ## Git
 
-See @.claude/rules/git.md for the full rules. Summary: prefer the single `.ai/scripts/git.sh <action>` wrapper (`start`, `branch`, `commit`, `push`, `pr`) over raw git for any operation it covers. The legacy per-action scripts remain as compatibility shims, but new instructions should use `.ai/scripts/git.sh` so outside-sandbox approval can be whitelisted once. Read-only git is fine. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.
+Summary: always use the `.ai/scripts/git.sh <action>` wrapper (`start`, `branch`, `commit`, `push`, `pr`) over raw git for any operation it covers. Read-only git is fine. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.

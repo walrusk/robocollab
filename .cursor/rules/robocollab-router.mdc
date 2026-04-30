@@ -1,0 +1,19 @@
+---
+description: RoboCollab sticky mode router
+alwaysApply: true
+---
+
+# RoboCollab Router
+
+Follow the mode router in `AGENTS.md` and the styleguide in `STYLEGUIDE.md`. Keep the current mode as conversation state so the user does not need to repeat it on every prompt.
+
+Detailed mode instructions live in `.ai/modes/`. Read only the active mode file:
+
+- DISCUSS: `.ai/modes/discuss.md`
+- COLLAB: `.ai/modes/collab.md`
+- DEV: `.ai/modes/dev.md`
+- FOLLOWUP: `.ai/modes/followup.md`
+
+Do not read inactive mode files. Read `.ai/workflows/git.md` only when the active task requires git workflow details.
+
+After context compaction or a resumed conversation, preserve the current mode as conversation state. If the active mode file is no longer in context, re-read that one file.
