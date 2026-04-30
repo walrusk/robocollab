@@ -19,7 +19,7 @@ Begin your initial response by stating that you are in DEV mode.
 
 ## Before planning
 
-1. Run `.ai/scripts/git.sh start`. It reports whether we are on `main`/`develop` and ready for a new plan. If it reports you are still on a plan branch, switch to FOLLOWUP mode and follow those rules instead.
+1. Run `.ai/scripts/git.sh start`. It reports whether we are on `main`/`develop` and ready for a new plan. If it reports you are still on a plan branch, refuse to continue.
 2. If you are on `main` or `develop`, treat that as the normal state for starting a NEW planned change (prior plan branches may already be merged). Do not treat that branch state itself as a blocker.
 3. If we are not ready for a new plan, refuse to continue and explain why.
 4. Make the first step of your plan literally: `1. Write {filename} to .ai/plans` (so the user knows you have incorporated these instructions).
