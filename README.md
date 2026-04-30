@@ -16,7 +16,8 @@ chmod +x install.sh
 
 The script announces exactly what it will do and prompts before making changes. It:
 
-- copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, `.cursor/skills/`, and `.codex/` into your repo (overwriting matching files);
+- copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
+- asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
 - prompts before overwriting an existing `AGENTS.md`, `STYLEGUIDE.md`, `CLAUDE.md`, or `.claude/settings.json`.
 
@@ -60,6 +61,8 @@ The agent edits the current branch directly and does not touch git — you handl
 ├── plans/                 Plan files written during DEV mode
 ├── scripts/               Canonical git workflow wrapper plus compatibility shims
 └── workflows/             Lazy-loaded workflow policies
+.agents/
+└── skills/                Repo-scoped Codex skills
 .claude/
 └── settings.json          Claude Code permissions (denies reads of .env*)
 .cursor/
@@ -81,7 +84,7 @@ Each runtime picks up the same sticky router and lazy mode files:
 
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` references `STYLEGUIDE.md`; agents read the active mode file from `.ai/modes/` only after the router selects that mode.
 - **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. The detailed mode bodies still live in `.ai/modes/` and are read only when active. Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
-- **Codex** reads `AGENTS.md` and `STYLEGUIDE.md` for prose rules, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only git, blocking legacy shim escalation plus raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
+- **Codex** reads `AGENTS.md` and `STYLEGUIDE.md` for prose rules, discovers repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only git, blocking legacy shim escalation plus raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
 - **Any other agent** that reads `AGENTS.md` gets the mode router, styleguide reference, and git summary. For full detail it should read `STYLEGUIDE.md` and the active file in `.ai/modes/` when the router selects a mode.
 
 The `.ai/modes/` files are the source of truth for detailed mode behavior.

@@ -15,6 +15,9 @@ item()  { printf "  \033[0;36m•\033[0m %s\n" "$1"; }
 warn()  { printf "  \033[0;33m⚠\033[0m %s\n" "$1"; }
 ok()    { printf "\033[1;32m%s\033[0m\n" "$1"; }
 
+INSTALL_REACT_NATIVE_SKILLS=false
+INSTALL_REACT_SKILLS=false
+
 prompt_yes_no() {
   local prompt="$1"
   local default="${2:-N}"
@@ -64,6 +67,19 @@ ensure_rtk() {
   ok "rtk initialized."
 }
 
+select_framework_skills() {
+  info "Optional framework skills"
+
+  if prompt_yes_no "Install React Native skills? (react-native and react-native-ui-lib)" "y/N"; then
+    INSTALL_REACT_NATIVE_SKILLS=true
+    return
+  fi
+
+  if prompt_yes_no "Install React skills? (react)" "y/N"; then
+    INSTALL_REACT_SKILLS=true
+  fi
+}
+
 # Copy a source directory's contents into a destination directory, creating the
 # destination if needed. Existing files in the destination are overwritten.
 copy_tree() {
@@ -80,6 +96,33 @@ copy_tree() {
   # Copy contents (including dotfiles) without nesting src inside dest.
   cp -R "$src/." "$dest/"
   item "$label"
+}
+
+copy_skill() {
+  local skill="$1"
+
+  copy_tree "$SRC/.agents/skills/$skill" "$INSTALL_DIR/.agents/skills/$skill" ".agents/skills/$skill/"
+  copy_tree "$SRC/.cursor/skills/$skill" "$INSTALL_DIR/.cursor/skills/$skill" ".cursor/skills/$skill/"
+}
+
+install_framework_skills() {
+  info "Installing optional framework skills..."
+
+  if [[ "$INSTALL_REACT_NATIVE_SKILLS" == true ]]; then
+    copy_skill "react-native"
+    copy_skill "react-native-ui-lib"
+    ok "Done."
+    return
+  fi
+
+  if [[ "$INSTALL_REACT_SKILLS" == true ]]; then
+    copy_skill "react"
+    ok "Done."
+    return
+  fi
+
+  item "No framework skills selected"
+  ok "Done."
 }
 
 sync_git_wrapper() {
@@ -201,8 +244,11 @@ item ".ai/modes/          — Lazy-loaded mode instructions"
 item ".ai/workflows/      — Lazy-loaded workflow policies"
 item ".ai/plans/          — Plan file directory"
 item ".cursor/rules/      — Cursor sticky mode router"
-item ".cursor/skills/     — Cursor skill files"
 item ".codex/             — Codex config and exec-policy rules"
+echo ""
+info "Prompt for optional framework skills:"
+item "React Native installs react-native and react-native-ui-lib skills"
+item "React installs the react skill"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
 item ".gitignore"
@@ -218,6 +264,7 @@ info "Clean up:"
 item "Remove the temporary directory"
 
 confirm
+select_framework_skills
 
 # --- Clone ---
 
@@ -239,10 +286,13 @@ copy_tree "$SRC/.ai/modes"     "$INSTALL_DIR/.ai/modes"     ".ai/modes/"
 copy_tree "$SRC/.ai/workflows" "$INSTALL_DIR/.ai/workflows" ".ai/workflows/"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
 copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
-copy_tree "$SRC/.cursor/skills" "$INSTALL_DIR/.cursor/skills" ".cursor/skills/"
 copy_tree "$SRC/.codex"        "$INSTALL_DIR/.codex"        ".codex/"
 
 ok "Done."
+
+# --- Optional framework skills ---
+
+install_framework_skills
 
 # --- Integrate line-based files ---
 
