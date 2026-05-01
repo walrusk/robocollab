@@ -21,7 +21,7 @@ These rules apply only when the active mode asks you to run git. This is a workf
 .ai/scripts/git.sh pr <gh pr create args>
 ```
 
-Use the canonical `.ai/scripts/git.sh` entrypoint rather than the legacy per-action shims.
+Use the canonical `.ai/scripts/git.sh` entrypoint for covered workflow actions.
 
 If the wrapper refuses to commit, push, or open a PR on `main`/`develop`, do not work around it with raw git. If `pr` reports a missing base-branch file, run `start` first.
 

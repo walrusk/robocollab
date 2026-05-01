@@ -59,15 +59,15 @@ The agent edits the current branch directly and does not touch git — you handl
 .ai/
 ├── modes/                 Lazy-loaded mode instructions
 ├── plans/                 Plan files written during DEV mode
-├── scripts/               Canonical git workflow wrapper plus compatibility shims
+├── scripts/               Canonical git workflow wrapper
 └── workflows/             Lazy-loaded workflow policies
 .agents/
-└── skills/                Repo-scoped Codex skills
+└── skills/                Optional repo-scoped Codex framework skills
 .claude/
 └── settings.json          Claude Code permissions (denies reads of .env*)
 .cursor/
 ├── rules/                 Thin Cursor sticky mode router
-└── skills/                Framework-specific Cursor skills
+└── skills/                Optional framework-specific Cursor skills
 .codex/
 ├── config.toml            Codex filesystem permissions (denies reads of .env*)
 └── rules/                 Codex exec-policy rules
@@ -83,8 +83,8 @@ CLAUDE.md                  Imports AGENTS.md for Claude Code
 Each runtime picks up the same sticky router and lazy mode files:
 
 - **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` references `STYLEGUIDE.md`; agents read the active mode file from `.ai/modes/` only after the router selects that mode.
-- **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. The detailed mode bodies still live in `.ai/modes/` and are read only when active. Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
-- **Codex** reads `AGENTS.md` and `STYLEGUIDE.md` for prose rules, discovers repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only git, blocking legacy shim escalation plus raw `git add`/`commit`/`push`/`checkout -b` and `gh pr create`, and prompting for everything else).
+- **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. The detailed mode bodies still live in `.ai/modes/` and are read only when active. When installed, Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
+- **Codex** reads `AGENTS.md`; `AGENTS.md` references `STYLEGUIDE.md` as always-loaded project guidance. Codex discovers installed repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only `rtk git`, blocking raw or `rtk`-wrapped mutating git/PR commands covered by the wrapper, and prompting for everything else).
 - **Any other agent** that reads `AGENTS.md` gets the mode router, styleguide reference, and git summary. For full detail it should read `STYLEGUIDE.md` and the active file in `.ai/modes/` when the router selects a mode.
 
 The `.ai/modes/` files are the source of truth for detailed mode behavior.
@@ -92,7 +92,7 @@ The `.ai/workflows/` files are the source of truth for reusable workflow policie
 
 ## Scripts
 
-All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entrypoint and wraps the git operations that have guardrails worth enforcing (no commits on `main`/`develop`, recorded base branch for PRs, etc.). The older per-action scripts remain as compatibility shims that forward to `git.sh`.
+All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entrypoint and wraps the git operations that have guardrails worth enforcing (no commits on `main`/`develop`, recorded base branch for PRs, etc.).
 
 | Script | Purpose |
 |---|---|
@@ -102,7 +102,7 @@ All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entryp
 | `git.sh push` | Push the current branch to `origin` |
 | `git.sh pr <gh pr create args>` | Push and open a PR against the recorded base branch |
 
-Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine to use directly.
+Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where the active mode permits git; run raw shell commands through `rtk`.
 
 ## Sensitive files
 

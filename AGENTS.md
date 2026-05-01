@@ -36,4 +36,4 @@ Read and follow @STYLEGUIDE.md as part of the always-loaded project instructions
 
 ## Git
 
-Summary: always use the `.ai/scripts/git.sh <action>` wrapper (`start`, `branch`, `commit`, `push`, `pr`) over raw git for any operation it covers. Read-only git is fine. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.
+Summary: when the active mode permits git, use `.ai/scripts/git.sh <action>` (`start`, `branch`, `commit`, `push`, `pr`) for any operation it covers. Read-only git is fine via `rtk git` where the active mode allows it. Never force push, reset, rebase, amend, skip hooks, or edit git config without an explicit user request.

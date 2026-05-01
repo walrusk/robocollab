@@ -130,8 +130,6 @@ sync_git_wrapper() {
   local dest_dir="$2"
   local src_git="$src_dir/git.sh"
   local dest_git="$dest_dir/git.sh"
-  local legacy_script
-  local removed_any=false
 
   if [[ ! -f "$src_git" ]]; then
     warn "Source missing: $src_git (skipping .ai/scripts/git.sh)"
@@ -142,17 +140,6 @@ sync_git_wrapper() {
   cp "$src_git" "$dest_git"
   chmod +x "$dest_git"
   item ".ai/scripts/git.sh"
-
-  for legacy_script in start.sh branch.sh commit.sh push.sh pr.sh; do
-    if [[ -e "$dest_dir/$legacy_script" ]]; then
-      rm -f "$dest_dir/$legacy_script"
-      removed_any=true
-    fi
-  done
-
-  if [[ "$removed_any" == true ]]; then
-    item ".ai/scripts/ legacy shims removed"
-  fi
 }
 
 # Append lines from src into dest, skipping duplicates. Creates dest from src if
