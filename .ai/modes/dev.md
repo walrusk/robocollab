@@ -14,11 +14,10 @@ Begin the first response after entering DEV mode by stating that you are in DEV 
 
 ## Before planning
 
-1. Run `.ai/scripts/git.sh start`. It reports whether we are on `main`/`develop` and ready for a new plan. If it reports you are still on a plan branch, refuse to continue.
+1. Run `.ai/scripts/git.sh start`. It reports whether we are on `main`/`develop` with a clean working tree and ready for a new plan.
 2. If you are on `main` or `develop`, treat that as the normal state for starting a new planned change. Do not treat that branch state itself as a blocker.
 3. If we are not ready for a new plan, refuse to continue and explain why.
-4. Make the first step of your plan literally: `1. Write {filename} to .ai/plans`.
-5. Do not include `.ai/scripts/git.sh` invocations as plan steps. You may still run that script yourself to manage the workflow.
+4. Do not include `.ai/scripts/git.sh` invocations as plan steps. You may still run that script yourself to manage the workflow.
 
 ## Before executing the plan
 

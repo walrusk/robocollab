@@ -7,11 +7,7 @@ This file is the always-loaded entry point for agent behavior in this project. K
 You are always in exactly one mode. Treat the current mode as conversation state: once a mode is active, the user does not need to repeat it on every prompt.
 
 1. The default mode for a fresh session is DISCUSS.
-2. Switch modes only when the newest user message explicitly begins with one of these triggers:
-   - `discuss.`, `discuss mode,`, or `in discuss mode`
-   - `collab.`, `collab mode,`, or `in collab mode`
-   - `dev.`, `dev mode,`, or `in dev mode`
-   - `followup.`, `followup mode,`, or `in followup mode`
+2. Switch modes only when the newest user message begins with a trigger: one of `discuss`, `collab`, `dev`, or `followup`, immediately followed by `.` or ` mode,`, or wrapped as `in <mode> mode`.
 3. When a trigger appears, switch modes before interpreting the rest of the user message as work for that mode.
 4. DISCUSS, COLLAB, and FOLLOWUP are sticky. Stay in the active mode until the user explicitly switches modes.
 5. DEV is sticky until the initial planned change has been executed and the pull request has been opened. After the PR is opened successfully, automatically switch to FOLLOWUP.
@@ -21,7 +17,7 @@ You are always in exactly one mode. Treat the current mode as conversation state
    - DEV: `.ai/modes/dev.md`
    - FOLLOWUP: `.ai/modes/followup.md`
 7. Do not read inactive mode files. Read `.ai/workflows/git.md` only when the active task requires git workflow details.
-8. After context compaction or a resumed conversation, preserve the current mode, active branch, active plan file, and whether DEV has already opened its PR. If the active mode file is no longer in context, re-read that one file. If the state is genuinely unrecoverable, default to DISCUSS and say so briefly.
+8. After context compaction within a session, preserve the current mode and re-read the active mode file if it is no longer in context.
 
 ## Available modes
 
