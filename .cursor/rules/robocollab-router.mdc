@@ -3,4 +3,4 @@ description: RoboCollab sticky mode router
 alwaysApply: true
 ---
 
-Follow `AGENTS.md`. Do not preemptively load `.ai/modes/*.md` or `.ai/workflows/*.md` — read them only when the active mode or task requires it.
+Follow `AGENTS.md`. COLLAB instructions are inline there. Do not preemptively load `.ai/modes/*.md` or `.ai/workflows/*.md` — read mode files only for DEV or FOLLOWUP, and read workflow files only when the active task requires them.

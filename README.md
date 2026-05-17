@@ -1,6 +1,6 @@
 # RoboCollab
 
-A structured workflow for collaborating with AI coding agents. It defines a small sticky mode router, lazy-loaded mode instructions, lazy-loaded workflow policies, and wrapper scripts for the parts of git that have footguns — so you get a repeatable, predictable process for planning, executing, and reviewing changes with an agent without loading every workflow into context up front.
+A structured workflow for collaborating with AI coding agents. It defines a small sticky mode router, inline default collaboration rules, lazy-loaded planning mode instructions, lazy-loaded workflow policies, and wrapper scripts for the parts of git that have footguns — so you get a repeatable, predictable process for planning, executing, and reviewing changes with an agent without loading every workflow into context up front.
 
 RoboCollab is runtime-agnostic: it ships a universal `AGENTS.md` with the mode router and styleguide that any agent that respects those conventions can read, plus thin runtime adapters for Claude Code, Cursor, and Codex.
 
@@ -17,6 +17,7 @@ chmod +x install.sh
 The script announces exactly what it will do and prompts before making changes. It:
 
 - copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
+- removes legacy `.ai/modes/discuss.md` and `.ai/modes/collab.md` files from older installs;
 - asks whether to install `robotnik` into your PATH if it is not already installed;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
@@ -54,7 +55,7 @@ Entered automatically at the end of DEV. The agent makes follow-up edits on the 
 
 ```
 .ai/
-├── modes/                 Lazy-loaded mode instructions
+├── modes/                 Lazy-loaded DEV and FOLLOWUP mode instructions
 ├── plans/                 Plan files written during DEV mode
 ├── scripts/               Workflow scripts
 └── workflows/             Lazy-loaded workflow policies
@@ -76,14 +77,15 @@ CLAUDE.md                  Imports AGENTS.md for Claude Code
 
 ## Rules
 
-Each runtime picks up the same sticky router and lazy mode files:
+Each runtime picks up the same sticky router, inline COLLAB rules, and lazy DEV/FOLLOWUP mode files:
 
-- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. Agents read the active mode file from `.ai/modes/` only after the router selects that mode.
-- **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. The detailed mode bodies still live in `.ai/modes/` and are read only when active. When installed, Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
+- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. Agents read a file from `.ai/modes/` only after the router selects DEV or FOLLOWUP.
+- **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. DEV and FOLLOWUP still live in `.ai/modes/` and are read only when active. When installed, Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
 - **Codex** reads `AGENTS.md`, including its inline styleguide. Codex discovers installed repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only `rtk git`, blocking raw or `rtk`-wrapped mutating git/PR commands covered by the wrapper, and prompting for everything else).
-- **Any other agent** that reads `AGENTS.md` gets the mode router, styleguide, and git summary. For full detail it should read the active file in `.ai/modes/` when the router selects a mode.
+- **Any other agent** that reads `AGENTS.md` gets the mode router, COLLAB rules, styleguide, and git summary. For DEV or FOLLOWUP detail, it should read the active file in `.ai/modes/` when the router selects one of those modes.
 
-The `.ai/modes/` files are the source of truth for detailed mode behavior.
+`AGENTS.md` is the source of truth for COLLAB behavior.
+The `.ai/modes/` files are the source of truth for DEV and FOLLOWUP behavior.
 The `.ai/workflows/` files are the source of truth for reusable workflow policies like git.
 
 ## Scripts
