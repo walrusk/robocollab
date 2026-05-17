@@ -3,6 +3,7 @@
 set -euo pipefail
 
 REPO_URL="${ROBOCOLLAB_REPO_URL:-https://github.com/walrusk/robocollab.git}"
+ROBOTNIK_INSTALL_URL="${ROBOTNIK_INSTALL_URL:-https://raw.githubusercontent.com/walrusk/robotnik/main/bash/install.sh}"
 TMP_DIR=".robocollab-install"
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="$INSTALL_DIR/$(basename "${BASH_SOURCE[0]}")"
@@ -170,70 +171,18 @@ sync_scripts() {
   fi
 }
 
-path_contains_dir() {
-  local dir="$1"
-  case ":$PATH:" in
-    *":$dir:"*) return 0 ;;
-    *) return 1 ;;
-  esac
-}
+install_robotnik() {
+  info "Installing Robotnik..."
 
-first_user_path_dir() {
-  local candidate
-  for candidate in "$HOME/.local/bin" "$HOME/bin" "$HOME/.bin"; do
-    if path_contains_dir "$candidate"; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-first_writable_path_dir() {
-  local path_dir
-  local IFS=:
-
-  for path_dir in $PATH; do
-    [[ -n "$path_dir" && -d "$path_dir" && -w "$path_dir" ]] || continue
-    echo "$path_dir"
-    return 0
-  done
-
-  return 1
-}
-
-install_robotnik_on_path() {
-  local robotnik_src="$INSTALL_DIR/.ai/scripts/robotnik"
-
-  if [[ ! -f "$robotnik_src" ]]; then
-    warn "robotnik script was not installed under .ai/scripts; skipping PATH install."
-    return
+  if ! command -v curl >/dev/null 2>&1; then
+    warn "curl is required to install Robotnik from $ROBOTNIK_INSTALL_URL."
+    return 1
   fi
 
-  if command -v robotnik >/dev/null 2>&1; then
-    item "robotnik is already installed in PATH"
-    return
-  fi
-
-  info "Optional Robotnik PATH install"
-
-  if ! prompt_yes_no "Install robotnik into your PATH?" "y/N"; then
-    item "Skipped robotnik PATH install"
-    return
-  fi
-
-  local bin_dir
-  if ! bin_dir="$(first_user_path_dir)" && ! bin_dir="$(first_writable_path_dir)"; then
-    bin_dir="$HOME/.local/bin"
-    warn "$bin_dir is not currently in PATH."
-    warn "robotnik will be installed there; add it to PATH before running robotnik directly."
-  fi
-
-  mkdir -p "$bin_dir"
-  cp "$robotnik_src" "$bin_dir/robotnik"
-  chmod +x "$bin_dir/robotnik"
-  item "$bin_dir/robotnik"
+  local robotnik_installer="$SRC/robotnik-install.sh"
+  curl -fsSL "$ROBOTNIK_INSTALL_URL" -o "$robotnik_installer"
+  bash "$robotnik_installer"
+  ok "Robotnik installed."
 }
 
 # Append lines from src into dest, skipping duplicates. Creates dest from src if
@@ -320,7 +269,7 @@ echo "It will:"
 item "Clone $REPO_URL into a temporary directory"
 echo ""
 info "Copy these directories (overwriting matching files):"
-item ".ai/scripts/      — RoboCollab scripts including git.sh and robotnik"
+item ".ai/scripts/      — RoboCollab scripts"
 item ".ai/modes/          — Lazy-loaded DEV and FOLLOWUP mode instructions"
 item ".ai/workflows/      — Lazy-loaded workflow policies"
 item ".ai/plans/          — Plan file directory"
@@ -328,8 +277,10 @@ item ".cursor/rules/      — Cursor sticky mode router"
 item ".codex/             — Codex config and exec-policy rules"
 item ".ai/modes/discuss.md and .ai/modes/collab.md are removed if left over from an older install"
 echo ""
+info "Install latest external tools:"
+item "Robotnik from $ROBOTNIK_INSTALL_URL"
+echo ""
 info "Prompt for optional installs:"
-item "Robotnik can be installed into your PATH if it is not already installed"
 item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
@@ -374,9 +325,9 @@ copy_tree "$SRC/.codex"        "$INSTALL_DIR/.codex"        ".codex/"
 
 ok "Done."
 
-# --- Optional PATH install ---
+# --- External tools ---
 
-install_robotnik_on_path
+install_robotnik
 
 # --- Optional framework skills ---
 
