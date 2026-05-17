@@ -98,6 +98,16 @@ copy_tree() {
   item "$label"
 }
 
+remove_obsolete_managed_file() {
+  local path="$1"
+  local label="$2"
+
+  if [[ -e "$path" ]]; then
+    rm -f "$path"
+    item "$label (removed obsolete file)"
+  fi
+}
+
 copy_skill() {
   local skill="$1"
 
@@ -316,6 +326,7 @@ item ".ai/workflows/      — Lazy-loaded workflow policies"
 item ".ai/plans/          — Plan file directory"
 item ".cursor/rules/      — Cursor sticky mode router"
 item ".codex/             — Codex config and exec-policy rules"
+item ".ai/modes/discuss.md is removed if left over from an older install"
 echo ""
 info "Prompt for optional installs:"
 item "Robotnik can be installed into your PATH if it is not already installed"
@@ -328,7 +339,6 @@ item ".cursorignore"
 echo ""
 info "Copy these files (prompt to overwrite if they already exist):"
 item "AGENTS.md"
-item "STYLEGUIDE.md"
 item "CLAUDE.md"
 item ".claude/settings.json"
 echo ""
@@ -355,6 +365,7 @@ info "Copying directories..."
 
 sync_scripts "$SRC/.ai/scripts" "$INSTALL_DIR/.ai/scripts"
 copy_tree "$SRC/.ai/modes"     "$INSTALL_DIR/.ai/modes"     ".ai/modes/"
+remove_obsolete_managed_file "$INSTALL_DIR/.ai/modes/discuss.md" ".ai/modes/discuss.md"
 copy_tree "$SRC/.ai/workflows" "$INSTALL_DIR/.ai/workflows" ".ai/workflows/"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
 copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
@@ -384,7 +395,6 @@ ok "Done."
 info "Installing top-level files..."
 
 copy_or_prompt "$SRC/AGENTS.md"              "$INSTALL_DIR/AGENTS.md"              "AGENTS.md"              "AGENTS.md"
-copy_or_prompt "$SRC/STYLEGUIDE.md"          "$INSTALL_DIR/STYLEGUIDE.md"          "STYLEGUIDE.md"          "STYLEGUIDE.md"
 copy_or_prompt "$SRC/CLAUDE.md"              "$INSTALL_DIR/CLAUDE.md"              "CLAUDE.md"              "CLAUDE.md"
 copy_or_prompt "$SRC/.claude/settings.json"  "$INSTALL_DIR/.claude/settings.json"  ".claude/settings.json"  ".claude/settings.json"
 

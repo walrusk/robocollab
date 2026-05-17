@@ -1,8 +1,6 @@
 # COLLAB Mode
 
-COLLAB mode is for working alongside the user on the current branch, where the user may also be editing in parallel. It is entered only when the user explicitly switches modes and remains active until the user switches back to DISCUSS or DEV.
-
-Begin the first response after entering COLLAB mode by stating that you are in COLLAB mode.
+COLLAB mode is for working alongside the user on the current branch, where the user may also be editing in parallel. It is the default mode for fresh sessions and remains active until the user switches to DEV or FOLLOWUP.
 
 ## Rules
 

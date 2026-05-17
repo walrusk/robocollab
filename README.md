@@ -2,7 +2,7 @@
 
 A structured workflow for collaborating with AI coding agents. It defines a small sticky mode router, lazy-loaded mode instructions, lazy-loaded workflow policies, and wrapper scripts for the parts of git that have footguns — so you get a repeatable, predictable process for planning, executing, and reviewing changes with an agent without loading every workflow into context up front.
 
-RoboCollab is runtime-agnostic: it ships a universal `AGENTS.md` and top-level `STYLEGUIDE.md` that any agent that respects those conventions can read, plus thin runtime adapters for Claude Code, Cursor, and Codex.
+RoboCollab is runtime-agnostic: it ships a universal `AGENTS.md` with the mode router and styleguide that any agent that respects those conventions can read, plus thin runtime adapters for Claude Code, Cursor, and Codex.
 
 ## Install
 
@@ -20,17 +20,19 @@ The script announces exactly what it will do and prompts before making changes. 
 - asks whether to install `robotnik` into your PATH if it is not already installed;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
-- prompts before overwriting an existing `AGENTS.md`, `STYLEGUIDE.md`, `CLAUDE.md`, or `.claude/settings.json`.
+- prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`.
 
 After it finishes you can delete `install.sh`.
 
 ## How it works
 
-Agents operate in one of four sticky modes. **DISCUSS** is the default; the others are triggered by a short phrase at the start of your instruction (or entered automatically). Once a mode is active, it remains active as conversation state until you switch modes again.
+Agents operate in one of three sticky modes. **COLLAB** is the default; DEV is triggered by a short phrase at the start of your instruction, and FOLLOWUP is entered automatically after a DEV PR opens. Once a mode is active, it remains active as conversation state until you switch modes again.
 
-### DISCUSS — default
+### COLLAB — default pair-programming on the current branch
 
-Read-only. The agent discusses prospective changes but does not edit code or run mutating commands. Switches to DEV or COLLAB only when you explicitly ask.
+Trigger explicitly with `"in collab mode, ..."` or `"collab. ..."` when returning from another mode.
+
+The agent edits the current branch directly and does not touch git — you handle branches, commits, and pushes. If it notices a problem with something you wrote, it points it out rather than silently changing it. Because COLLAB is the assumed default, the agent does not announce that it is in this mode.
 
 ### DEV — planned change on a new branch
 
@@ -47,12 +49,6 @@ After the PR is opened, the agent auto-switches to FOLLOWUP.
 ### FOLLOWUP — iterate on an open PR
 
 Entered automatically at the end of DEV. The agent makes follow-up edits on the same branch, keeps the plan file in `.ai/plans/` in sync, and commits/pushes via the scripts. Refuses to run on `main`/`develop`.
-
-### COLLAB — pair-program on the current branch
-
-Trigger with `"in collab mode, ..."` or `"collab. ..."`.
-
-The agent edits the current branch directly and does not touch git — you handle branches, commits, and pushes. If it notices a problem with something you wrote, it points it out rather than silently changing it.
 
 ## Project layout
 
@@ -72,8 +68,7 @@ The agent edits the current branch directly and does not touch git — you handl
 .codex/
 ├── config.toml            Codex filesystem permissions (denies reads of .env*)
 └── rules/                 Codex exec-policy rules
-AGENTS.md                  Always-loaded mode router, styleguide reference, git summary
-STYLEGUIDE.md              Always-loaded project-neutral code style rules
+AGENTS.md                  Always-loaded mode router, inline styleguide, git summary
 CLAUDE.md                  Imports AGENTS.md for Claude Code
 .cursorignore              Blocks Cursor from reading .env* files
 .gitignore                 Base ignores for RoboCollab's own artifacts
@@ -83,10 +78,10 @@ CLAUDE.md                  Imports AGENTS.md for Claude Code
 
 Each runtime picks up the same sticky router and lazy mode files:
 
-- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. `AGENTS.md` references `STYLEGUIDE.md`; agents read the active mode file from `.ai/modes/` only after the router selects that mode.
+- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`. Agents read the active mode file from `.ai/modes/` only after the router selects that mode.
 - **Cursor** reads `AGENTS.md` plus a thin `alwaysApply: true` router under `.cursor/rules/`. The detailed mode bodies still live in `.ai/modes/` and are read only when active. When installed, Cursor skills under `.cursor/skills/` hold framework-specific conventions such as React props typing.
-- **Codex** reads `AGENTS.md`; `AGENTS.md` references `STYLEGUIDE.md` as always-loaded project guidance. Codex discovers installed repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only `rtk git`, blocking raw or `rtk`-wrapped mutating git/PR commands covered by the wrapper, and prompting for everything else).
-- **Any other agent** that reads `AGENTS.md` gets the mode router, styleguide reference, and git summary. For full detail it should read `STYLEGUIDE.md` and the active file in `.ai/modes/` when the router selects a mode.
+- **Codex** reads `AGENTS.md`, including its inline styleguide. Codex discovers installed repo-scoped skills from `.agents/skills/`, applies `.codex/config.toml` for project-scoped filesystem permissions, and enforces `.codex/rules/git.rules` for command-level approval decisions outside the sandbox (allowing `.ai/scripts/git.sh` and read-only `rtk git`, blocking raw or `rtk`-wrapped mutating git/PR commands covered by the wrapper, and prompting for everything else).
+- **Any other agent** that reads `AGENTS.md` gets the mode router, styleguide, and git summary. For full detail it should read the active file in `.ai/modes/` when the router selects a mode.
 
 The `.ai/modes/` files are the source of truth for detailed mode behavior.
 The `.ai/workflows/` files are the source of truth for reusable workflow policies like git.

@@ -1,13 +1,13 @@
 # FOLLOWUP Mode
 
-FOLLOWUP mode is for making additional changes on an active plan branch after the initial PR has been opened in DEV mode. It is entered automatically at the end of DEV mode and remains active until the user explicitly switches back to DISCUSS or DEV.
+FOLLOWUP mode is for making additional changes on an active plan branch after the initial PR has been opened in DEV mode. It is entered automatically at the end of DEV mode and remains active until the user explicitly switches back to COLLAB or DEV.
 
 Begin the first response after entering FOLLOWUP mode by stating that you are in FOLLOWUP mode.
 
 ## When FOLLOWUP applies
 
 - You are on a plan branch (i.e. not `main` or `develop`) with an existing plan file in `.ai/plans/`.
-- If you are on `main` or `develop`, do not use FOLLOWUP mode. Refuse to continue and ask whether we should proceed in DISCUSS or DEV mode instead.
+- If you are on `main` or `develop`, do not use FOLLOWUP mode. Refuse to continue and ask whether we should proceed in COLLAB or DEV mode instead.
 
 ## Rules
 
