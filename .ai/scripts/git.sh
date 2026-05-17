@@ -22,6 +22,47 @@ current_branch() {
   rtk git rev-parse --abbrev-ref HEAD
 }
 
+is_linked_worktree() {
+  local git_dir
+  git_dir="$(rtk git rev-parse --git-dir)"
+
+  local common_dir
+  common_dir="$(rtk git rev-parse --git-common-dir)"
+
+  [[ "$git_dir" != "$common_dir" ]]
+}
+
+ref_exists() {
+  local ref="$1"
+  rtk git rev-parse --verify --quiet "$ref^{commit}" >/dev/null
+}
+
+detached_head_base_branch() {
+  local head_commit
+  head_commit="$(rtk git rev-parse HEAD)"
+
+  local candidate ref
+  for candidate in main develop; do
+    for ref in "$candidate" "origin/$candidate"; do
+      if ref_exists "$ref" && [[ "$(rtk git rev-parse "$ref^{commit}")" == "$head_commit" ]]; then
+        echo "$candidate"
+        return 0
+      fi
+    done
+  done
+
+  for candidate in main develop; do
+    for ref in "$candidate" "origin/$candidate"; do
+      if ref_exists "$ref" && rtk git merge-base --is-ancestor HEAD "$ref"; then
+        echo "$candidate"
+        return 0
+      fi
+    done
+  done
+
+  return 1
+}
+
 refuse_if_protected_branch() {
   local branch="$1"
   local action="$2"
@@ -54,6 +95,18 @@ cmd_start() {
   if [[ "$branch" == "main" && "$is_clean" == true ]]; then
     echo "$branch" > "$BASE_BRANCH_FILE"
     echo "on main. ready for new plan."
+    return 0
+  fi
+
+  if [[ "$branch" == "HEAD" && "$is_clean" == true ]] && is_linked_worktree; then
+    local base_branch
+    if ! base_branch="$(detached_head_base_branch)"; then
+      echo "in worktree on HEAD. not ready for new plan; could not infer base branch."
+      exit 1
+    fi
+
+    echo "$base_branch" > "$BASE_BRANCH_FILE"
+    echo "in worktree on HEAD from $base_branch. ready to continue."
     return 0
   fi
 
