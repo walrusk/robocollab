@@ -125,21 +125,105 @@ install_framework_skills() {
   ok "Done."
 }
 
-sync_git_wrapper() {
+sync_scripts() {
   local src_dir="$1"
   local dest_dir="$2"
-  local src_git="$src_dir/git.sh"
-  local dest_git="$dest_dir/git.sh"
 
-  if [[ ! -f "$src_git" ]]; then
-    warn "Source missing: $src_git (skipping .ai/scripts/git.sh)"
+  if [[ ! -d "$src_dir" ]]; then
+    warn "Source missing: $src_dir (skipping .ai/scripts/)"
     return
   fi
 
   mkdir -p "$dest_dir"
-  cp "$src_git" "$dest_git"
-  chmod +x "$dest_git"
-  item ".ai/scripts/git.sh"
+
+  local src_script
+  local copied=0
+  for src_script in "$src_dir"/*; do
+    [[ -f "$src_script" ]] || continue
+
+    local script_name
+    local dest_script
+    script_name="$(basename "$src_script")"
+    dest_script="$dest_dir/$script_name"
+
+    cp "$src_script" "$dest_script"
+    if [[ -x "$src_script" ]]; then
+      chmod +x "$dest_script"
+    fi
+
+    item ".ai/scripts/$script_name"
+    copied=$((copied + 1))
+  done
+
+  if [[ $copied -eq 0 ]]; then
+    warn "No scripts found in $src_dir"
+  fi
+}
+
+path_contains_dir() {
+  local dir="$1"
+  case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+first_user_path_dir() {
+  local candidate
+  for candidate in "$HOME/.local/bin" "$HOME/bin" "$HOME/.bin"; do
+    if path_contains_dir "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+first_writable_path_dir() {
+  local path_dir
+  local IFS=:
+
+  for path_dir in $PATH; do
+    [[ -n "$path_dir" && -d "$path_dir" && -w "$path_dir" ]] || continue
+    echo "$path_dir"
+    return 0
+  done
+
+  return 1
+}
+
+install_robotnik_on_path() {
+  local robotnik_src="$INSTALL_DIR/.ai/scripts/robotnik"
+
+  if [[ ! -f "$robotnik_src" ]]; then
+    warn "robotnik script was not installed under .ai/scripts; skipping PATH install."
+    return
+  fi
+
+  if command -v robotnik >/dev/null 2>&1; then
+    item "robotnik is already installed in PATH"
+    return
+  fi
+
+  info "Optional Robotnik PATH install"
+
+  if ! prompt_yes_no "Install robotnik into your PATH?" "y/N"; then
+    item "Skipped robotnik PATH install"
+    return
+  fi
+
+  local bin_dir
+  if ! bin_dir="$(first_user_path_dir)" && ! bin_dir="$(first_writable_path_dir)"; then
+    bin_dir="$HOME/.local/bin"
+    warn "$bin_dir is not currently in PATH."
+    warn "robotnik will be installed there; add it to PATH before running robotnik directly."
+  fi
+
+  mkdir -p "$bin_dir"
+  cp "$robotnik_src" "$bin_dir/robotnik"
+  chmod +x "$bin_dir/robotnik"
+  item "$bin_dir/robotnik"
 }
 
 # Append lines from src into dest, skipping duplicates. Creates dest from src if
@@ -226,14 +310,15 @@ echo "It will:"
 item "Clone $REPO_URL into a temporary directory"
 echo ""
 info "Copy these directories (overwriting matching files):"
-item ".ai/scripts/git.sh  — Canonical git workflow wrapper"
+item ".ai/scripts/      — RoboCollab scripts including git.sh and robotnik"
 item ".ai/modes/          — Lazy-loaded mode instructions"
 item ".ai/workflows/      — Lazy-loaded workflow policies"
 item ".ai/plans/          — Plan file directory"
 item ".cursor/rules/      — Cursor sticky mode router"
 item ".codex/             — Codex config and exec-policy rules"
 echo ""
-info "Prompt for optional framework skills:"
+info "Prompt for optional installs:"
+item "Robotnik can be installed into your PATH if it is not already installed"
 item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
@@ -268,7 +353,7 @@ ok "Done."
 
 info "Copying directories..."
 
-sync_git_wrapper "$SRC/.ai/scripts" "$INSTALL_DIR/.ai/scripts"
+sync_scripts "$SRC/.ai/scripts" "$INSTALL_DIR/.ai/scripts"
 copy_tree "$SRC/.ai/modes"     "$INSTALL_DIR/.ai/modes"     ".ai/modes/"
 copy_tree "$SRC/.ai/workflows" "$INSTALL_DIR/.ai/workflows" ".ai/workflows/"
 copy_tree "$SRC/.ai/plans"     "$INSTALL_DIR/.ai/plans"     ".ai/plans/"
@@ -276,6 +361,10 @@ copy_tree "$SRC/.cursor/rules" "$INSTALL_DIR/.cursor/rules" ".cursor/rules/"
 copy_tree "$SRC/.codex"        "$INSTALL_DIR/.codex"        ".codex/"
 
 ok "Done."
+
+# --- Optional PATH install ---
+
+install_robotnik_on_path
 
 # --- Optional framework skills ---
 

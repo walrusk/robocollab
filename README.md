@@ -17,6 +17,7 @@ chmod +x install.sh
 The script announces exactly what it will do and prompts before making changes. It:
 
 - copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
+- asks whether to install `robotnik` into your PATH if it is not already installed;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
 - prompts before overwriting an existing `AGENTS.md`, `STYLEGUIDE.md`, `CLAUDE.md`, or `.claude/settings.json`.
@@ -59,7 +60,7 @@ The agent edits the current branch directly and does not touch git — you handl
 .ai/
 ├── modes/                 Lazy-loaded mode instructions
 ├── plans/                 Plan files written during DEV mode
-├── scripts/               Canonical git workflow wrapper
+├── scripts/               Workflow scripts
 └── workflows/             Lazy-loaded workflow policies
 .agents/
 └── skills/                Optional repo-scoped Codex framework skills
@@ -101,6 +102,7 @@ All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entryp
 | `git.sh commit "message"` | Stage all changes and commit |
 | `git.sh push` | Push the current branch to `origin` |
 | `git.sh pr <gh pr create args>` | Push and open a PR against the recorded base branch |
+| `robotnik <request>` | Ask Codex for two shell command options, show risk, and run the selected command |
 
 Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where the active mode permits git; run raw shell commands through `rtk`.
 
