@@ -6,4 +6,5 @@ description: >
 
 # React
 
-For React components, use `type Props = {}` for props rather than giving the type a component-specific name.
+- For React components, use `type Props = {}` for props rather than giving the type a component-specific name.
+- When making a new component always make a new file.

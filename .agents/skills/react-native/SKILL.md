@@ -7,6 +7,6 @@ description: >
 
 # React Native
 
-For React Native components, use `type Props = {}` for props rather than giving the type a component-specific name.
-
-When writing or editing `View` or `Text` components, use the `react-native-ui-lib` skill.
+- For React Native components, use `type Props = {}` for props rather than giving the type a component-specific name.
+- When writing or editing `View` or `Text` components, use the `react-native-ui-lib` skill.
+- When making a new component always make a new file.
