@@ -382,8 +382,8 @@ stage_untrack_ignored_agent_files() {
   fi
 }
 
-# Copy src to dest. If dest exists, prompt the user to overwrite or skip — do
-# not attempt to merge structured content.
+# Copy src to dest. If dest exists with different content, prompt the user to
+# overwrite or skip — do not attempt to merge structured content.
 # $3 is a short label for output (defaults to basename of dest).
 # $4 is the relative path inside the source repo used in the skip message.
 copy_or_prompt() {
@@ -398,6 +398,11 @@ copy_or_prompt() {
   fi
 
   if [[ -e "$dest" ]]; then
+    if cmp -s "$src" "$dest"; then
+      item "$label (already up to date)"
+      return
+    fi
+
     local answer=""
     printf "  \033[0;33m?\033[0m %s already exists. Overwrite? [y/N] " "$label"
     read -r answer
