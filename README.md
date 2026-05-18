@@ -21,9 +21,9 @@ The script announces exactly what it will do and prompts before making changes. 
 - installs the latest Bash version of `robotnik` from [`walrusk/robotnik`](https://github.com/walrusk/robotnik) via `bash/install.sh`;
 - asks whether to install a `robocollab` command into a writable directory on your `PATH`, unless `robocollab` already exists on `PATH`;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
-- line-merges `.gitignore.installed` into `.gitignore` and line-merges `.cursorignore` (skipping duplicates), adding installed RoboCollab artifacts to `.gitignore` while leaving `.ai/plans/` trackable;
-- asks whether to untrack RoboCollab files that are now covered by `.gitignore`, staging their removal from git while keeping the files on disk;
-- prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`.
+- line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
+- prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`;
+- asks whether to stage the installed RoboCollab repo files for commit.
 
 After it finishes you can delete `install.sh`.
 
@@ -78,8 +78,7 @@ bin/
 AGENTS.md                  Always-loaded mode router, inline styleguide, git summary
 CLAUDE.md                  Imports AGENTS.md for Claude Code
 .cursorignore              Blocks Cursor from reading .env* files
-.gitignore                 Local ignores for this RoboCollab repo
-.gitignore.installed       Ignore entries merged into target repos by install.sh
+.gitignore                 Base ignores for RoboCollab's own artifacts
 ```
 
 ## Rules

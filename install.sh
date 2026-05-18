@@ -21,6 +21,7 @@ ok()    { printf "\033[1;32m%s\033[0m\n" "$1"; }
 INSTALL_REACT_NATIVE_SKILLS=false
 INSTALL_REACT_SKILLS=false
 INSTALL_ROBOCOLLAB_COMMAND=false
+STAGE_PATHS=()
 
 prompt_yes_no() {
   local prompt="$1"
@@ -41,6 +42,24 @@ confirm() {
     echo "Aborted."
     exit 1
   fi
+}
+
+rel_from_install_dir() {
+  local path="$1"
+
+  if [[ "$path" == "$INSTALL_DIR/"* ]]; then
+    printf "%s\n" "${path#"$INSTALL_DIR"/}"
+    return
+  fi
+
+  printf "%s\n" "$path"
+}
+
+record_stage_path() {
+  local rel="$1"
+
+  [[ -n "$rel" ]] || return
+  STAGE_PATHS+=("$rel")
 }
 
 path_contains_dir() {
@@ -176,6 +195,17 @@ copy_tree() {
   mkdir -p "$dest"
   # Copy contents (including dotfiles) without nesting src inside dest.
   cp -R "$src/." "$dest/"
+
+  local rel_dest
+  rel_dest="$(rel_from_install_dir "$dest")"
+
+  local src_file
+  local rel_file
+  while IFS= read -r -d '' src_file; do
+    rel_file="${src_file#"$src"/}"
+    record_stage_path "$rel_dest/$rel_file"
+  done < <(find "$src" \( -type f -o -type l \) -print0)
+
   item "$label"
 }
 
@@ -185,6 +215,7 @@ remove_obsolete_managed_file() {
 
   if [[ -e "$path" ]]; then
     rm -f "$path"
+    record_stage_path "$(rel_from_install_dir "$path")"
     item "$label (removed obsolete file)"
   fi
 }
@@ -242,6 +273,7 @@ sync_scripts() {
       chmod +x "$dest_script"
     fi
 
+    record_stage_path "$(rel_from_install_dir "$dest_script")"
     item ".ai/scripts/$script_name"
     copied=$((copied + 1))
   done
@@ -311,6 +343,7 @@ integrate_lines() {
 
   if [[ ! -f "$dest" ]]; then
     cp "$src" "$dest"
+    record_stage_path "$(rel_from_install_dir "$dest")"
     item "$label (created)"
     return
   fi
@@ -325,60 +358,38 @@ integrate_lines() {
   done < "$src"
 
   if [[ $added -gt 0 ]]; then
+    record_stage_path "$(rel_from_install_dir "$dest")"
     item "$label (added $added new line(s))"
   else
     item "$label (already up to date)"
   fi
 }
 
-stage_untrack_ignored_agent_files() {
-  local ignore_src="$1"
+stage_installed_files() {
+  if [[ ${#STAGE_PATHS[@]} -eq 0 ]]; then
+    item "No installed repo files changed"
+    return
+  fi
 
-  if ! prompt_yes_no "Untrack RoboCollab files now covered by .gitignore? This stages their removal from git while keeping them on disk." "y/N"; then
-    item "Tracked RoboCollab files left unchanged"
+  if ! prompt_yes_no "Stage installed RoboCollab files for commit?" "y/N"; then
+    item "Installed files left unstaged"
     return
   fi
 
   if ! command -v git >/dev/null 2>&1; then
-    warn "git is not available, so tracked RoboCollab files cannot be untracked automatically."
+    warn "git is not available, so installed files cannot be staged automatically."
     return
   fi
 
   if ! git -C "$INSTALL_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    warn "$INSTALL_DIR is not inside a git work tree, so tracked RoboCollab files cannot be untracked automatically."
+    warn "$INSTALL_DIR is not inside a git work tree, so installed files cannot be staged automatically."
     return
   fi
 
-  if [[ ! -f "$ignore_src" ]]; then
-    warn "Source missing: $ignore_src (skipping git untrack cleanup)"
-    return
-  fi
-
-  if [[ -f "$INSTALL_DIR/.gitignore" ]]; then
-    if git -C "$INSTALL_DIR" add -- .gitignore; then
-      item ".gitignore (staged)"
-    else
-      warn "Could not stage .gitignore."
-    fi
-  fi
-
-  local tracked=()
-  local tracked_file
-  while IFS= read -r -d '' tracked_file; do
-    tracked+=("$tracked_file")
-  done < <(git -C "$INSTALL_DIR" ls-files -z -c -i --exclude-from="$ignore_src")
-
-  if [[ ${#tracked[@]} -eq 0 ]]; then
-    item "No tracked RoboCollab files matched the installed .gitignore entries"
-    return
-  fi
-
-  if git -C "$INSTALL_DIR" rm --cached -q -- "${tracked[@]}"; then
-    item "${#tracked[@]} tracked RoboCollab file(s) staged for removal from git"
-    item "Files remain on disk"
+  if git -C "$INSTALL_DIR" add -A -f -- "${STAGE_PATHS[@]}"; then
+    item "${#STAGE_PATHS[@]} installed path(s) staged"
   else
-    warn "Could not untrack every matching RoboCollab file automatically."
-    warn "No files were deleted; review git status and untrack them manually if needed."
+    warn "Could not stage installed RoboCollab files automatically."
   fi
 }
 
@@ -410,6 +421,7 @@ copy_or_prompt() {
       [yY]|[yY][eE][sS])
         mkdir -p "$(dirname "$dest")"
         cp "$src" "$dest"
+        record_stage_path "$(rel_from_install_dir "$dest")"
         item "$label (overwritten)"
         ;;
       *)
@@ -421,6 +433,7 @@ copy_or_prompt() {
 
   mkdir -p "$(dirname "$dest")"
   cp "$src" "$dest"
+  record_stage_path "$(rel_from_install_dir "$dest")"
   item "$label (created)"
 }
 
@@ -453,14 +466,16 @@ item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
-item ".gitignore (from .gitignore.installed; excludes .ai/plans/)"
+item ".gitignore"
 item ".cursorignore"
-item "Offer to untrack RoboCollab files covered by .gitignore and stage the git index removals"
 echo ""
 info "Copy these files (prompt to overwrite if they already exist):"
 item "AGENTS.md"
 item "CLAUDE.md"
 item ".claude/settings.json"
+echo ""
+info "Optional git staging:"
+item "Offer to stage installed RoboCollab repo files for commit"
 echo ""
 info "Clean up:"
 item "Remove the temporary directory"
@@ -508,9 +523,8 @@ install_framework_skills
 
 info "Merging ignore files..."
 
-integrate_lines "$SRC/.gitignore.installed" "$INSTALL_DIR/.gitignore"
-integrate_lines "$SRC/.cursorignore"        "$INSTALL_DIR/.cursorignore"
-stage_untrack_ignored_agent_files "$SRC/.gitignore.installed"
+integrate_lines "$SRC/.gitignore"    "$INSTALL_DIR/.gitignore"
+integrate_lines "$SRC/.cursorignore" "$INSTALL_DIR/.cursorignore"
 
 ok "Done."
 
@@ -522,6 +536,12 @@ copy_or_prompt "$SRC/AGENTS.md"              "$INSTALL_DIR/AGENTS.md"           
 copy_or_prompt "$SRC/CLAUDE.md"              "$INSTALL_DIR/CLAUDE.md"              "CLAUDE.md"              "CLAUDE.md"
 copy_or_prompt "$SRC/.claude/settings.json"  "$INSTALL_DIR/.claude/settings.json"  ".claude/settings.json"  ".claude/settings.json"
 
+ok "Done."
+
+# --- Optional git staging ---
+
+info "Git staging"
+stage_installed_files
 ok "Done."
 
 # --- Clean up ---
