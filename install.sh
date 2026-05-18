@@ -285,7 +285,7 @@ item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
-item ".gitignore"
+item ".gitignore (from .gitignore.installed; excludes .ai/plans/)"
 item ".cursorignore"
 echo ""
 info "Copy these files (prompt to overwrite if they already exist):"
@@ -337,8 +337,8 @@ install_framework_skills
 
 info "Merging ignore files..."
 
-integrate_lines "$SRC/.gitignore"    "$INSTALL_DIR/.gitignore"
-integrate_lines "$SRC/.cursorignore" "$INSTALL_DIR/.cursorignore"
+integrate_lines "$SRC/.gitignore.installed" "$INSTALL_DIR/.gitignore"
+integrate_lines "$SRC/.cursorignore"        "$INSTALL_DIR/.cursorignore"
 
 ok "Done."
 

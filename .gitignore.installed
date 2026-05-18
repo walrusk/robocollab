@@ -1,0 +1,17 @@
+# RoboCollab install artifacts kept local to each project.
+AGENTS.md
+CLAUDE.md
+.agents/skills/
+!.ai/
+.ai/modes/
+.ai/scripts/
+.ai/scripts/.base-branch
+.ai/workflows/
+# Keep .ai/plans/ trackable; DEV mode commits plan files there.
+!.ai/plans/
+!.ai/plans/**
+.claude/settings.json
+.codex/
+.cursor/rules/
+.cursor/skills/
+.robocollab-install/
