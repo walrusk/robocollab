@@ -19,11 +19,15 @@ The script announces exactly what it will do and prompts before making changes. 
 - copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
 - removes legacy `.ai/modes/discuss.md` and `.ai/modes/collab.md` files from older installs;
 - installs the latest Bash version of `robotnik` from [`walrusk/robotnik`](https://github.com/walrusk/robotnik) via `bash/install.sh`;
+- asks whether to install a `robocollab` command into a writable directory on your `PATH`, unless `robocollab` already exists on `PATH`;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore.installed` into `.gitignore` and line-merges `.cursorignore` (skipping duplicates), adding installed RoboCollab artifacts to `.gitignore` while leaving `.ai/plans/` trackable;
+- asks whether to untrack RoboCollab files that are now covered by `.gitignore`, staging their removal from git while keeping the files on disk;
 - prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`.
 
 After it finishes you can delete `install.sh`.
+
+If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory.
 
 ## How it works
 
@@ -69,6 +73,8 @@ Entered automatically at the end of DEV. The agent makes follow-up edits on the 
 .codex/
 ├── config.toml            Codex filesystem permissions (denies reads of .env*)
 └── rules/                 Codex exec-policy rules
+bin/
+└── robocollab             Optional PATH command that fetches and runs the latest installer
 AGENTS.md                  Always-loaded mode router, inline styleguide, git summary
 CLAUDE.md                  Imports AGENTS.md for Claude Code
 .cursorignore              Blocks Cursor from reading .env* files

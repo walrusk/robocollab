@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROBOCOLLAB_INSTALL_URL="${ROBOCOLLAB_INSTALL_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/install.sh}"
+
+info() { printf "\n\033[1;34m%s\033[0m\n" "$1"; }
+warn() { printf "  \033[0;33m!\033[0m %s\n" "$1"; }
+
+prompt_yes_no() {
+  local prompt="$1"
+  local answer
+
+  printf "\n\033[1;33m%s [y/N]\033[0m " "$prompt"
+  read -r answer
+
+  case "$answer" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+project_dir="$(pwd -P)"
+installer=""
+
+cleanup() {
+  if [[ -n "$installer" && -f "$installer" ]]; then
+    rm -f "$installer"
+  fi
+}
+trap cleanup EXIT
+
+info "RoboCollab"
+
+if ! prompt_yes_no "Run latest RoboCollab install in $project_dir?"; then
+  echo "Aborted."
+  exit 0
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+  warn "curl is required to fetch $ROBOCOLLAB_INSTALL_URL."
+  exit 1
+fi
+
+installer="$(mktemp "$project_dir/.robocollab-install.XXXXXX")"
+curl -fsSL "$ROBOCOLLAB_INSTALL_URL" -o "$installer"
+chmod +x "$installer"
+
+ROBOCOLLAB_INSTALLER_TEMP=1 bash "$installer"

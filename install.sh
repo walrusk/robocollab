@@ -3,6 +3,8 @@
 set -euo pipefail
 
 REPO_URL="${ROBOCOLLAB_REPO_URL:-https://github.com/walrusk/robocollab.git}"
+ROBOCOLLAB_COMMAND_NAME="robocollab"
+ROBOCOLLAB_COMMAND_DEST_DIR="${ROBOCOLLAB_BIN_DIR:-}"
 ROBOTNIK_INSTALL_URL="${ROBOTNIK_INSTALL_URL:-https://raw.githubusercontent.com/walrusk/robotnik/main/bash/install.sh}"
 TMP_DIR=".robocollab-install"
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,6 +20,7 @@ ok()    { printf "\033[1;32m%s\033[0m\n" "$1"; }
 
 INSTALL_REACT_NATIVE_SKILLS=false
 INSTALL_REACT_SKILLS=false
+INSTALL_ROBOCOLLAB_COMMAND=false
 
 prompt_yes_no() {
   local prompt="$1"
@@ -37,6 +40,83 @@ confirm() {
   if ! prompt_yes_no "Proceed?" "y/N"; then
     echo "Aborted."
     exit 1
+  fi
+}
+
+path_contains_dir() {
+  local target="$1"
+  local dir
+  local path_dirs=()
+
+  IFS=':' read -r -a path_dirs <<< "${PATH:-}"
+  for dir in "${path_dirs[@]}"; do
+    if [[ "$dir" == "$target" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+find_writable_path_dir() {
+  local dir
+  local path_dirs=()
+
+  IFS=':' read -r -a path_dirs <<< "${PATH:-}"
+
+  if [[ -n "${HOME:-}" ]]; then
+    for dir in "$HOME/.local/bin" "$HOME/bin"; do
+      if path_contains_dir "$dir"; then
+        printf "%s\n" "$dir"
+        return 0
+      fi
+    done
+
+    for dir in "${path_dirs[@]}"; do
+      if [[ -n "$dir" && "$dir" == "$HOME"/* && -d "$dir" && -w "$dir" ]]; then
+        printf "%s\n" "$dir"
+        return 0
+      fi
+    done
+  fi
+
+  for dir in /usr/local/bin /opt/homebrew/bin; do
+    if path_contains_dir "$dir" && [[ -d "$dir" && -w "$dir" ]]; then
+      printf "%s\n" "$dir"
+      return 0
+    fi
+  done
+
+  for dir in "${path_dirs[@]}"; do
+    if [[ -n "$dir" && -d "$dir" && -w "$dir" ]]; then
+      printf "%s\n" "$dir"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+select_robocollab_command_install() {
+  info "Optional command install"
+
+  if command -v "$ROBOCOLLAB_COMMAND_NAME" >/dev/null 2>&1; then
+    item "$ROBOCOLLAB_COMMAND_NAME is already installed at $(command -v "$ROBOCOLLAB_COMMAND_NAME")"
+    return
+  fi
+
+  if [[ -z "$ROBOCOLLAB_COMMAND_DEST_DIR" ]]; then
+    ROBOCOLLAB_COMMAND_DEST_DIR="$(find_writable_path_dir || true)"
+  fi
+
+  if [[ -z "$ROBOCOLLAB_COMMAND_DEST_DIR" ]]; then
+    warn "No writable directory was found in PATH."
+    warn "Set ROBOCOLLAB_BIN_DIR to a writable PATH directory and rerun this installer to install the robocollab command."
+    return
+  fi
+
+  if prompt_yes_no "Install $ROBOCOLLAB_COMMAND_NAME command to $ROBOCOLLAB_COMMAND_DEST_DIR?" "y/N"; then
+    INSTALL_ROBOCOLLAB_COMMAND=true
   fi
 }
 
@@ -185,6 +265,37 @@ install_robotnik() {
   ok "Robotnik installed."
 }
 
+install_robocollab_command() {
+  if [[ "$INSTALL_ROBOCOLLAB_COMMAND" != true ]]; then
+    return
+  fi
+
+  info "Installing $ROBOCOLLAB_COMMAND_NAME command..."
+
+  local src="$SRC/bin/$ROBOCOLLAB_COMMAND_NAME"
+  if [[ ! -f "$src" ]]; then
+    warn "Source missing: $src (skipping $ROBOCOLLAB_COMMAND_NAME command)"
+    return
+  fi
+
+  mkdir -p "$ROBOCOLLAB_COMMAND_DEST_DIR"
+  if [[ ! -d "$ROBOCOLLAB_COMMAND_DEST_DIR" || ! -w "$ROBOCOLLAB_COMMAND_DEST_DIR" ]]; then
+    warn "$ROBOCOLLAB_COMMAND_DEST_DIR is not writable, so $ROBOCOLLAB_COMMAND_NAME cannot be installed there."
+    return
+  fi
+
+  local dest="$ROBOCOLLAB_COMMAND_DEST_DIR/$ROBOCOLLAB_COMMAND_NAME"
+  cp "$src" "$dest"
+  chmod +x "$dest"
+  item "$dest"
+
+  if ! path_contains_dir "$ROBOCOLLAB_COMMAND_DEST_DIR"; then
+    warn "$ROBOCOLLAB_COMMAND_DEST_DIR is not currently in PATH."
+  fi
+
+  ok "Done."
+}
+
 # Append lines from src into dest, skipping duplicates. Creates dest from src if
 # it doesn't exist. Intended for simple line-oriented files like .gitignore.
 integrate_lines() {
@@ -217,6 +328,57 @@ integrate_lines() {
     item "$label (added $added new line(s))"
   else
     item "$label (already up to date)"
+  fi
+}
+
+stage_untrack_ignored_agent_files() {
+  local ignore_src="$1"
+
+  if ! prompt_yes_no "Untrack RoboCollab files now covered by .gitignore? This stages their removal from git while keeping them on disk." "y/N"; then
+    item "Tracked RoboCollab files left unchanged"
+    return
+  fi
+
+  if ! command -v git >/dev/null 2>&1; then
+    warn "git is not available, so tracked RoboCollab files cannot be untracked automatically."
+    return
+  fi
+
+  if ! git -C "$INSTALL_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    warn "$INSTALL_DIR is not inside a git work tree, so tracked RoboCollab files cannot be untracked automatically."
+    return
+  fi
+
+  if [[ ! -f "$ignore_src" ]]; then
+    warn "Source missing: $ignore_src (skipping git untrack cleanup)"
+    return
+  fi
+
+  if [[ -f "$INSTALL_DIR/.gitignore" ]]; then
+    if git -C "$INSTALL_DIR" add -- .gitignore; then
+      item ".gitignore (staged)"
+    else
+      warn "Could not stage .gitignore."
+    fi
+  fi
+
+  local tracked=()
+  local tracked_file
+  while IFS= read -r -d '' tracked_file; do
+    tracked+=("$tracked_file")
+  done < <(git -C "$INSTALL_DIR" ls-files -z -c -i --exclude-from="$ignore_src")
+
+  if [[ ${#tracked[@]} -eq 0 ]]; then
+    item "No tracked RoboCollab files matched the installed .gitignore entries"
+    return
+  fi
+
+  if git -C "$INSTALL_DIR" rm --cached -q -- "${tracked[@]}"; then
+    item "${#tracked[@]} tracked RoboCollab file(s) staged for removal from git"
+    item "Files remain on disk"
+  else
+    warn "Could not untrack every matching RoboCollab file automatically."
+    warn "No files were deleted; review git status and untrack them manually if needed."
   fi
 }
 
@@ -281,12 +443,14 @@ info "Install latest external tools:"
 item "Robotnik from $ROBOTNIK_INSTALL_URL"
 echo ""
 info "Prompt for optional installs:"
+item "robocollab command into a writable PATH directory"
 item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
 info "Merge into existing files line-by-line (or create if missing):"
 item ".gitignore (from .gitignore.installed; excludes .ai/plans/)"
 item ".cursorignore"
+item "Offer to untrack RoboCollab files covered by .gitignore and stage the git index removals"
 echo ""
 info "Copy these files (prompt to overwrite if they already exist):"
 item "AGENTS.md"
@@ -297,6 +461,7 @@ info "Clean up:"
 item "Remove the temporary directory"
 
 confirm
+select_robocollab_command_install
 select_framework_skills
 
 # --- Clone ---
@@ -328,6 +493,7 @@ ok "Done."
 # --- External tools ---
 
 install_robotnik
+install_robocollab_command
 
 # --- Optional framework skills ---
 
@@ -339,6 +505,7 @@ info "Merging ignore files..."
 
 integrate_lines "$SRC/.gitignore.installed" "$INSTALL_DIR/.gitignore"
 integrate_lines "$SRC/.cursorignore"        "$INSTALL_DIR/.cursorignore"
+stage_untrack_ignored_agent_files "$SRC/.gitignore.installed"
 
 ok "Done."
 
@@ -364,10 +531,15 @@ info "RoboCollab installed successfully!"
 echo ""
 echo "Next steps:"
 item "Review any files reported as 'left unchanged' and merge manually if needed."
+if [[ "$INSTALL_ROBOCOLLAB_COMMAND" == true ]]; then
+  item "Run 'robocollab' from any project directory to fetch and run the latest installer."
+fi
 item "Open this project in your agent of choice and try DEV mode."
 echo ""
 
-if prompt_yes_no "Delete this installer script ($SCRIPT_PATH)?" "y/N"; then
+if [[ "${ROBOCOLLAB_INSTALLER_TEMP:-}" == "1" ]]; then
+  :
+elif prompt_yes_no "Delete this installer script ($SCRIPT_PATH)?" "y/N"; then
   if rm -- "$SCRIPT_PATH"; then
     ok "Installer script deleted."
   else
