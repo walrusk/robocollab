@@ -3,9 +3,12 @@
 set -euo pipefail
 
 ROBOCOLLAB_INSTALL_URL="${ROBOCOLLAB_INSTALL_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/install.sh}"
+ROBOCOLLAB_SONIC_URL="${ROBOCOLLAB_SONIC_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/sonic.sh}"
+ROBOCOLLAB_SONIC_PROMPT_URL="${ROBOCOLLAB_SONIC_PROMPT_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/prompts/project-overview.md}"
 
 info() { printf "\n\033[1;34m%s\033[0m\n" "$1"; }
 warn() { printf "  \033[0;33m!\033[0m %s\n" "$1"; }
+ok()   { printf "\033[1;32m%s\033[0m\n" "$1"; }
 
 prompt_yes_no() {
   local prompt="$1"
@@ -22,28 +25,68 @@ prompt_yes_no() {
 
 project_dir="$(pwd -P)"
 installer=""
+sonic_tmp_dir=""
 
 cleanup() {
   if [[ -n "$installer" && -f "$installer" ]]; then
     rm -f "$installer"
   fi
+  if [[ -n "$sonic_tmp_dir" && -d "$sonic_tmp_dir" ]]; then
+    rm -rf "$sonic_tmp_dir"
+  fi
 }
 trap cleanup EXIT
 
+require_curl() {
+  if ! command -v curl >/dev/null 2>&1; then
+    warn "curl is required to fetch RoboCollab tools."
+    exit 1
+  fi
+}
+
+run_install() {
+  require_curl
+
+  installer="$(mktemp "$project_dir/.robocollab-install.XXXXXX")"
+  curl -fsSL "$ROBOCOLLAB_INSTALL_URL" -o "$installer"
+  chmod +x "$installer"
+
+  ROBOCOLLAB_INSTALLER_TEMP=1 bash "$installer"
+}
+
+run_sonic() {
+  local sonic_script
+  local sonic_prompt
+
+  require_curl
+
+  sonic_tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/robocollab-sonic.XXXXXX")"
+  sonic_script="$sonic_tmp_dir/sonic.sh"
+  sonic_prompt="$sonic_tmp_dir/project-overview.md"
+
+  curl -fsSL "$ROBOCOLLAB_SONIC_URL" -o "$sonic_script"
+  curl -fsSL "$ROBOCOLLAB_SONIC_PROMPT_URL" -o "$sonic_prompt"
+  chmod +x "$sonic_script"
+
+  SONIC_PROMPT_PATH="$sonic_prompt" bash "$sonic_script"
+}
+
+ran_action=false
+
 info "RoboCollab"
 
-if ! prompt_yes_no "Run latest RoboCollab install in $project_dir?"; then
-  echo "Aborted."
-  exit 0
+if prompt_yes_no "Run latest RoboCollab install in $project_dir?"; then
+  run_install
+  ran_action=true
 fi
 
-if ! command -v curl >/dev/null 2>&1; then
-  warn "curl is required to fetch $ROBOCOLLAB_INSTALL_URL."
-  exit 1
+if prompt_yes_no "Run Sonic project overview in $project_dir?"; then
+  run_sonic
+  ran_action=true
 fi
 
-installer="$(mktemp "$project_dir/.robocollab-install.XXXXXX")"
-curl -fsSL "$ROBOCOLLAB_INSTALL_URL" -o "$installer"
-chmod +x "$installer"
-
-ROBOCOLLAB_INSTALLER_TEMP=1 bash "$installer"
+if [[ "$ran_action" != true ]]; then
+  echo "No actions selected."
+else
+  ok "Done."
+fi

@@ -120,7 +120,22 @@ select_robocollab_command_install() {
   info "Optional command install"
 
   if command -v "$ROBOCOLLAB_COMMAND_NAME" >/dev/null 2>&1; then
-    item "$ROBOCOLLAB_COMMAND_NAME is already installed at $(command -v "$ROBOCOLLAB_COMMAND_NAME")"
+    local existing_command
+    local existing_dir
+
+    existing_command="$(command -v "$ROBOCOLLAB_COMMAND_NAME")"
+    existing_dir="$(dirname "$existing_command")"
+    item "$ROBOCOLLAB_COMMAND_NAME is already installed at $existing_command"
+
+    if [[ -w "$existing_command" || -w "$existing_dir" ]]; then
+      if prompt_yes_no "Update $ROBOCOLLAB_COMMAND_NAME command at $existing_command?" "y/N"; then
+        ROBOCOLLAB_COMMAND_DEST_DIR="$existing_dir"
+        INSTALL_ROBOCOLLAB_COMMAND=true
+      fi
+    else
+      warn "$existing_command is not writable, so $ROBOCOLLAB_COMMAND_NAME cannot be updated there."
+    fi
+
     return
   fi
 
@@ -557,7 +572,7 @@ echo ""
 echo "Next steps:"
 item "Review any files reported as 'left unchanged' and merge manually if needed."
 if [[ "$INSTALL_ROBOCOLLAB_COMMAND" == true ]]; then
-  item "Run 'robocollab' from any project directory to fetch and run the latest installer."
+  item "Run 'robocollab' from any project directory to fetch the latest installer or run Sonic."
 fi
 item "Open this project in your agent of choice and try DEV mode."
 echo ""

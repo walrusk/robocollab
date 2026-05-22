@@ -19,7 +19,7 @@ The script announces exactly what it will do and prompts before making changes. 
 - copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
 - removes legacy `.ai/modes/discuss.md` and `.ai/modes/collab.md` files from older installs;
 - installs the latest Bash version of `robotnik` from [`walrusk/robotnik`](https://github.com/walrusk/robotnik) via `bash/install.sh`;
-- asks whether to install a `robocollab` command into a writable directory on your `PATH`, unless `robocollab` already exists on `PATH`;
+- asks whether to install or update a `robocollab` command in a writable directory on your `PATH`;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
 - prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`;
@@ -27,7 +27,7 @@ The script announces exactly what it will do and prompts before making changes. 
 
 After it finishes you can delete `install.sh`.
 
-If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory.
+If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory, and it can also fetch and run Sonic against the current project.
 
 ## How it works
 
@@ -74,7 +74,10 @@ Entered automatically at the end of DEV. The agent makes follow-up edits on the 
 ├── config.toml            Codex filesystem permissions (denies reads of .env*)
 └── rules/                 Codex exec-policy rules
 bin/
-└── robocollab             Optional PATH command that fetches and runs the latest installer
+└── robocollab             Optional PATH command for installer updates and Sonic
+sonic/
+├── prompts/               Sonic agent instructions
+└── sonic.sh               Sonic runner for project graph generation
 AGENTS.md                  Always-loaded mode router, inline styleguide, git summary
 CLAUDE.md                  Imports AGENTS.md for Claude Code
 .cursorignore              Blocks Cursor from reading .env* files
@@ -109,6 +112,14 @@ All scripts live in `.ai/scripts/`. `.ai/scripts/git.sh` is the canonical entryp
 Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where the active mode permits git; run raw shell commands through `rtk`.
 
 `robotnik <request>` is installed as an external tool by `install.sh` from [`walrusk/robotnik`](https://github.com/walrusk/robotnik)'s `bash/install.sh`, rather than vendored in `.ai/scripts/`.
+
+## Sonic
+
+Sonic is an early RoboCollab tool for generating a project overview graph. Run `robocollab` from a project directory and choose the Sonic option. The command downloads the latest Sonic runner and prompt, then uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode.
+
+Sonic writes `.sonic/project-map.json` by default. The JSON is shaped for a future browser viewer using tools such as `@xyflow/react`: `nodes` describe major project modules with representative files, inputs, outputs, and technologies; `edges` describe the most important relationships between them.
+
+The runner is kept under `sonic/` because its next phase will likely add a contained npm workspace for the browser graph viewer.
 
 ## Sensitive files
 
