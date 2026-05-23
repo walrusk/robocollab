@@ -17,12 +17,11 @@ Usage:
   robocollab
   robocollab install
   robocollab sonic [sonic args]
-  robocollab view [sonic view args]
 
 Examples:
   robocollab
   robocollab sonic
-  robocollab view --port 5177
+  robocollab sonic --port 5177
 EOF
 }
 
@@ -121,11 +120,6 @@ if [[ $# -gt 0 ]]; then
       run_sonic "$@"
       exit 0
       ;;
-    view)
-      shift
-      run_sonic view "$@"
-      exit 0
-      ;;
     -h|--help)
       usage
       exit 0
@@ -144,7 +138,7 @@ if prompt_yes_no "Run latest RoboCollab install in $project_dir?"; then
   ran_action=true
 fi
 
-if prompt_yes_no "Run Sonic project overview in $project_dir?"; then
+if prompt_yes_no "Run Sonic in $project_dir? (generates map and opens viewer)"; then
   run_sonic
   ran_action=true
 fi

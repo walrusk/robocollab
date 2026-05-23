@@ -19,7 +19,7 @@ The script announces exactly what it will do and prompts before making changes. 
 - copies `.ai/scripts/`, `.ai/modes/`, `.ai/workflows/`, `.ai/plans/`, `.cursor/rules/`, and `.codex/` into your repo (overwriting matching files);
 - removes legacy `.ai/modes/discuss.md` and `.ai/modes/collab.md` files from older installs;
 - installs the latest Bash version of `robotnik` from [`walrusk/robotnik`](https://github.com/walrusk/robotnik) via `bash/install.sh`;
-- asks whether to install or update a `robocollab` command in a writable directory on your `PATH`;
+- asks whether to install or update a `robocollab` command in a writable directory on your `PATH`, including the latest Sonic commands;
 - asks whether to install React Native skills (`react-native` and `react-native-ui-lib`); if you decline, asks whether to install the React skill;
 - line-merges `.gitignore` and `.cursorignore` (skipping duplicates);
 - prompts before overwriting an existing `AGENTS.md`, `CLAUDE.md`, or `.claude/settings.json`;
@@ -27,7 +27,7 @@ The script announces exactly what it will do and prompts before making changes. 
 
 After it finishes you can delete `install.sh`.
 
-If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory, and it can also fetch and run Sonic against the current project. You can also run `robocollab sonic` or `robocollab view` directly.
+If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` or running Sonic. You can also run `robocollab sonic` directly to generate a project map and open the viewer.
 
 ## How it works
 
@@ -116,17 +116,17 @@ Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where t
 
 ## Sonic
 
-Sonic is an early RoboCollab tool for generating and viewing a project overview graph. Run `robocollab` from a project directory and choose the Sonic option, or run `robocollab sonic` directly. The command downloads the latest Sonic bundle, then uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode.
+Sonic is an early RoboCollab tool for generating and viewing a project overview graph. Run `robocollab sonic` from a project directory. The command downloads the latest Sonic bundle to a temporary directory, uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode, writes the project map, then starts the browser viewer automatically.
 
 Sonic runs the selected agent CLI with its highest available effort setting by default: Codex uses `model_reasoning_effort="xhigh"` and Claude Code uses `--effort max`.
 
 Sonic writes `.sonic/project-map.json` by default. The JSON stays close to the agent's canonical graph output: `nodes` describe major purpose-level modules with representative files, inputs, outputs, and technologies; `edges` describe the most important runtime, user-flow, data-flow, deployment, or ownership relationships between them. The viewer may add a `view.positions` object to the same file so `@xyflow/react` can persist manually adjusted node positions without mixing renderer-specific fields into the module records.
 
-Run `robocollab view` or `./sonic/sonic.sh view` to start the prototype browser viewer. It runs the contained React/Node project in `sonic/viewer/`, serves the JSON store through a small Express API, and opens the local viewer URL. Useful options:
+`robocollab sonic` runs the contained React/Node viewer from the downloaded Sonic bundle after generation. It serves the JSON store through a small Express API and opens the local viewer URL. Useful options:
 
 ```bash
-robocollab view --data .sonic/project-map.json --port 5177
-./sonic/sonic.sh view --no-open
+robocollab sonic --port 5177
+robocollab sonic --no-open
 ```
 
 ## Sensitive files

@@ -13,15 +13,12 @@ DEFAULT_OUTPUT=".sonic/project-map.json"
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  sonic [--output <path>] [--print] [optional focus text]
-  sonic view [--data <path>] [--host <host>] [--port <port>] [--no-open]
-  sonic --view [--data <path>] [--host <host>] [--port <port>] [--no-open]
+  sonic [--output <path>] [--host <host>] [--port <port>] [--no-open] [optional focus text]
 
 Examples:
   sonic
   sonic --output .sonic/project-map.json focus on the API and database layers
-  sonic view
-  sonic --view --data .sonic/project-map.json --port 5177
+  sonic --port 5177 --no-open
 
 Configuration:
   SONIC_AI_CMD       Optional custom agent command. If unset, Sonic asks you to
@@ -399,10 +396,6 @@ fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --view)
-      view_mode=true
-      shift
-      ;;
     --output)
       [[ $# -ge 2 ]] || die "--output requires a path"
       output_path="$2"
@@ -492,4 +485,8 @@ if [[ "$print_output" == true ]]; then
   cat "$output_path"
 else
   echo "Wrote $output_path" >&2
+  if [[ "$view_data_path_set" != true ]]; then
+    view_data_path="$output_path"
+  fi
+  run_viewer "$view_data_path" "$view_host" "$view_port"
 fi

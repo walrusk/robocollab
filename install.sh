@@ -128,7 +128,7 @@ select_robocollab_command_install() {
     item "$ROBOCOLLAB_COMMAND_NAME is already installed at $existing_command"
 
     if [[ -w "$existing_command" || -w "$existing_dir" ]]; then
-      if prompt_yes_no "Update $ROBOCOLLAB_COMMAND_NAME command at $existing_command?" "y/N"; then
+      if prompt_yes_no "Update $ROBOCOLLAB_COMMAND_NAME command at $existing_command? (adds latest Sonic commands)" "y/N"; then
         ROBOCOLLAB_COMMAND_DEST_DIR="$existing_dir"
         INSTALL_ROBOCOLLAB_COMMAND=true
       fi
@@ -149,7 +149,7 @@ select_robocollab_command_install() {
     return
   fi
 
-  if prompt_yes_no "Install $ROBOCOLLAB_COMMAND_NAME command to $ROBOCOLLAB_COMMAND_DEST_DIR?" "y/N"; then
+  if prompt_yes_no "Install $ROBOCOLLAB_COMMAND_NAME command to $ROBOCOLLAB_COMMAND_DEST_DIR? (includes Sonic commands)" "y/N"; then
     INSTALL_ROBOCOLLAB_COMMAND=true
   fi
 }
@@ -476,7 +476,7 @@ info "Install latest external tools:"
 item "Robotnik from $ROBOTNIK_INSTALL_URL"
 echo ""
 info "Prompt for optional installs:"
-item "robocollab command into a writable PATH directory"
+item "robocollab command into a writable PATH directory (includes Sonic commands)"
 item "React Native installs react-native and react-native-ui-lib skills"
 item "React installs the react skill"
 echo ""
@@ -572,7 +572,7 @@ echo ""
 echo "Next steps:"
 item "Review any files reported as 'left unchanged' and merge manually if needed."
 if [[ "$INSTALL_ROBOCOLLAB_COMMAND" == true ]]; then
-  item "Run 'robocollab' from any project directory to fetch the latest installer or run Sonic."
+  item "Run 'robocollab sonic' from any project directory to generate .sonic/project-map.json and open the Sonic browser viewer."
 fi
 item "Open this project in your agent of choice and try DEV mode."
 echo ""
