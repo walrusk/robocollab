@@ -1,3 +1,6 @@
 .vscode
 .DS_Store
 .ai/scripts/.base-branch
+node_modules
+sonic/viewer/dist
+.sonic

@@ -7,16 +7,21 @@ CODEX_SONIC_AI_CMD='out=$(mktemp); log=$(mktemp); if codex exec --skip-git-repo-
 CLAUDE_SONIC_AI_CMD='claude -p --no-session-persistence --permission-mode dontAsk --output-format text'
 DEFAULT_SONIC_AI_CMD="$CODEX_SONIC_AI_CMD"
 DEFAULT_PROMPT_URL="${SONIC_PROMPT_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/prompts/project-overview.md}"
+DEFAULT_VIEWER_ARCHIVE_URL="${SONIC_VIEWER_ARCHIVE_URL:-https://github.com/walrusk/robocollab/archive/refs/heads/main.tar.gz}"
 DEFAULT_OUTPUT=".sonic/project-map.json"
 
 usage() {
   cat >&2 <<'EOF'
 Usage:
   sonic [--output <path>] [--print] [optional focus text]
+  sonic view [--data <path>] [--host <host>] [--port <port>] [--no-open]
+  sonic --view [--data <path>] [--host <host>] [--port <port>] [--no-open]
 
 Examples:
   sonic
   sonic --output .sonic/project-map.json focus on the API and database layers
+  sonic view
+  sonic --view --data .sonic/project-map.json --port 5177
 
 Configuration:
   SONIC_AI_CMD       Optional custom agent command. If unset, Sonic asks you to
@@ -28,6 +33,7 @@ Configuration:
 
   SONIC_OUTPUT       Default output path when --output is not provided.
   SONIC_PROMPT_PATH  Optional path to the project overview prompt.
+  SONIC_VIEWER_DIR   Optional path to the Sonic React viewer project.
 
 Safety:
   Sonic asks the selected agent CLI to inspect the project in read-only mode and
@@ -197,6 +203,31 @@ prompt_path_for_script() {
   printf '%s\n' "$tmp_prompt"
 }
 
+viewer_dir_for_script() {
+  local script_dir viewer_dir archive found_package
+
+  if [[ -n "${SONIC_VIEWER_DIR:-}" ]]; then
+    [[ -f "$SONIC_VIEWER_DIR/package.json" ]] || die "SONIC_VIEWER_DIR does not contain package.json: $SONIC_VIEWER_DIR"
+    printf '%s\n' "$SONIC_VIEWER_DIR"
+    return
+  fi
+
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  viewer_dir="$script_dir/viewer"
+  if [[ -f "$viewer_dir/package.json" ]]; then
+    printf '%s\n' "$viewer_dir"
+    return
+  fi
+
+  archive="$tmp_dir/robocollab.tar.gz"
+  download "$DEFAULT_VIEWER_ARCHIVE_URL" "$archive"
+  tar -xzf "$archive" -C "$tmp_dir"
+
+  found_package="$(find "$tmp_dir" -path '*/sonic/viewer/package.json' -print -quit)"
+  [[ -n "$found_package" ]] || die "could not find Sonic viewer in downloaded RoboCollab archive"
+  printf '%s\n' "$(dirname "$found_package")"
+}
+
 project_name() {
   local base
   base="$(basename "$PWD")"
@@ -216,6 +247,30 @@ $(project_name)
 Optional focus:
 $focus
 EOF
+}
+
+run_viewer() {
+  local data_path="$1"
+  local host="$2"
+  local port="$3"
+  local viewer_dir
+
+  have node || die "node is required to run the Sonic viewer"
+  have npm || die "npm is required to run the Sonic viewer"
+
+  viewer_dir="$(viewer_dir_for_script)"
+
+  if [[ ! -d "$viewer_dir/node_modules" ]]; then
+    echo "Installing Sonic viewer dependencies..." >&2
+    npm --prefix "$viewer_dir" install
+  fi
+
+  echo "Starting Sonic viewer..." >&2
+  SONIC_PROJECT_ROOT="$PWD" \
+    SONIC_DATA_PATH="$data_path" \
+    SONIC_HOST="$host" \
+    SONIC_PORT="$port" \
+    npm --prefix "$viewer_dir" run dev
 }
 
 generate_with_ai_command() {
@@ -322,15 +377,52 @@ normalize_graph() {
 }
 
 output_path="${SONIC_OUTPUT:-$DEFAULT_OUTPUT}"
+view_mode=false
+view_data_path="${SONIC_DATA_PATH:-}"
+view_data_path_set=false
+if [[ -n "$view_data_path" ]]; then
+  view_data_path_set=true
+fi
+view_host="${SONIC_HOST:-127.0.0.1}"
+view_port="${SONIC_PORT:-5177}"
 print_output=false
 focus_parts=()
 
+if [[ "${1:-}" == "view" ]]; then
+  view_mode=true
+  shift
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --view)
+      view_mode=true
+      shift
+      ;;
     --output)
       [[ $# -ge 2 ]] || die "--output requires a path"
       output_path="$2"
       shift 2
+      ;;
+    --data)
+      [[ $# -ge 2 ]] || die "--data requires a path"
+      view_data_path="$2"
+      view_data_path_set=true
+      shift 2
+      ;;
+    --host)
+      [[ $# -ge 2 ]] || die "--host requires a host"
+      view_host="$2"
+      shift 2
+      ;;
+    --port)
+      [[ $# -ge 2 ]] || die "--port requires a port"
+      view_port="$2"
+      shift 2
+      ;;
+    --no-open)
+      export SONIC_NO_OPEN=1
+      shift
       ;;
     --print)
       print_output=true
@@ -357,6 +449,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sonic.XXXXXX")"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+if [[ "$view_mode" == true ]]; then
+  if [[ "$view_data_path_set" != true ]]; then
+    view_data_path="$output_path"
+  fi
+  run_viewer "$view_data_path" "$view_host" "$view_port"
+  exit 0
+fi
+
 have jq || die "jq is required to validate Sonic's JSON output"
 
 if [[ -z "${SONIC_AI_CMD:-}" && ! -f "$(sonic_config_path 2>/dev/null || printf /dev/null)" ]]; then
@@ -366,9 +469,6 @@ if [[ -z "${SONIC_AI_CMD:-}" && ! -f "$(sonic_config_path 2>/dev/null || printf 
 fi
 
 focus="${focus_parts[*]}"
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sonic.XXXXXX")"
-trap 'rm -rf "$tmp_dir"' EXIT
-
 prompt_file="$(prompt_path_for_script)"
 raw_file="$tmp_dir/raw.json"
 normalized_file="$tmp_dir/project-map.json"

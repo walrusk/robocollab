@@ -27,7 +27,7 @@ The script announces exactly what it will do and prompts before making changes. 
 
 After it finishes you can delete `install.sh`.
 
-If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory, and it can also fetch and run Sonic against the current project.
+If installed, `robocollab` can be run from any project directory. It prompts before downloading the latest RoboCollab `install.sh` and running it in the current directory, and it can also fetch and run Sonic against the current project. You can also run `robocollab sonic` or `robocollab view` directly.
 
 ## How it works
 
@@ -77,7 +77,8 @@ bin/
 └── robocollab             Optional PATH command for installer updates and Sonic
 sonic/
 ├── prompts/               Sonic agent instructions
-└── sonic.sh               Sonic runner for project graph generation
+├── viewer/                React/Node project map viewer
+└── sonic.sh               Sonic runner for project graph generation and viewing
 AGENTS.md                  Always-loaded mode router, inline styleguide, git summary
 CLAUDE.md                  Imports AGENTS.md for Claude Code
 .cursorignore              Blocks Cursor from reading .env* files
@@ -115,11 +116,16 @@ Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where t
 
 ## Sonic
 
-Sonic is an early RoboCollab tool for generating a project overview graph. Run `robocollab` from a project directory and choose the Sonic option. The command downloads the latest Sonic runner and prompt, then uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode.
+Sonic is an early RoboCollab tool for generating and viewing a project overview graph. Run `robocollab` from a project directory and choose the Sonic option, or run `robocollab sonic` directly. The command downloads the latest Sonic bundle, then uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode.
 
-Sonic writes `.sonic/project-map.json` by default. The JSON is shaped for a future browser viewer using tools such as `@xyflow/react`: `nodes` describe major project modules with representative files, inputs, outputs, and technologies; `edges` describe the most important relationships between them.
+Sonic writes `.sonic/project-map.json` by default. The JSON stays close to the agent's canonical graph output: `nodes` describe major project modules with representative files, inputs, outputs, and technologies; `edges` describe the most important relationships between them. The viewer may add a `view.positions` object to the same file so `@xyflow/react` can persist manually adjusted node positions without mixing renderer-specific fields into the module records.
 
-The runner is kept under `sonic/` because its next phase will likely add a contained npm workspace for the browser graph viewer.
+Run `robocollab view` or `./sonic/sonic.sh view` to start the prototype browser viewer. It runs the contained React/Node project in `sonic/viewer/`, serves the JSON store through a small Express API, and opens the local viewer URL. Useful options:
+
+```bash
+robocollab view --data .sonic/project-map.json --port 5177
+./sonic/sonic.sh view --no-open
+```
 
 ## Sensitive files
 

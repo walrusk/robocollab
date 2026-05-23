@@ -5,10 +5,31 @@ set -euo pipefail
 ROBOCOLLAB_INSTALL_URL="${ROBOCOLLAB_INSTALL_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/install.sh}"
 ROBOCOLLAB_SONIC_URL="${ROBOCOLLAB_SONIC_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/sonic.sh}"
 ROBOCOLLAB_SONIC_PROMPT_URL="${ROBOCOLLAB_SONIC_PROMPT_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/prompts/project-overview.md}"
+ROBOCOLLAB_ARCHIVE_URL="${ROBOCOLLAB_ARCHIVE_URL:-https://github.com/walrusk/robocollab/archive/refs/heads/main.tar.gz}"
 
 info() { printf "\n\033[1;34m%s\033[0m\n" "$1"; }
 warn() { printf "  \033[0;33m!\033[0m %s\n" "$1"; }
 ok()   { printf "\033[1;32m%s\033[0m\n" "$1"; }
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  robocollab
+  robocollab install
+  robocollab sonic [sonic args]
+  robocollab view [sonic view args]
+
+Examples:
+  robocollab
+  robocollab sonic
+  robocollab view --port 5177
+EOF
+}
+
+die() {
+  echo "robocollab: $*" >&2
+  exit 1
+}
 
 prompt_yes_no() {
   local prompt="$1"
@@ -57,21 +78,64 @@ run_install() {
 run_sonic() {
   local sonic_script
   local sonic_prompt
+  local archive
+  local found_script
 
   require_curl
 
   sonic_tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/robocollab-sonic.XXXXXX")"
-  sonic_script="$sonic_tmp_dir/sonic.sh"
-  sonic_prompt="$sonic_tmp_dir/project-overview.md"
+  archive="$sonic_tmp_dir/robocollab.tar.gz"
 
-  curl -fsSL "$ROBOCOLLAB_SONIC_URL" -o "$sonic_script"
-  curl -fsSL "$ROBOCOLLAB_SONIC_PROMPT_URL" -o "$sonic_prompt"
+  if command -v tar >/dev/null 2>&1; then
+    curl -fsSL "$ROBOCOLLAB_ARCHIVE_URL" -o "$archive"
+    tar -xzf "$archive" -C "$sonic_tmp_dir"
+    found_script="$(find "$sonic_tmp_dir" -path '*/sonic/sonic.sh' -print -quit)"
+    [[ -n "$found_script" ]] || die "could not find Sonic in downloaded RoboCollab archive"
+    sonic_script="$found_script"
+    sonic_prompt="$(dirname "$sonic_script")/prompts/project-overview.md"
+  else
+    sonic_script="$sonic_tmp_dir/sonic.sh"
+    sonic_prompt="$sonic_tmp_dir/project-overview.md"
+    curl -fsSL "$ROBOCOLLAB_SONIC_URL" -o "$sonic_script"
+    curl -fsSL "$ROBOCOLLAB_SONIC_PROMPT_URL" -o "$sonic_prompt"
+  fi
+
+  [[ -f "$sonic_prompt" ]] || die "could not find Sonic prompt"
   chmod +x "$sonic_script"
 
-  SONIC_PROMPT_PATH="$sonic_prompt" bash "$sonic_script"
+  SONIC_PROMPT_PATH="$sonic_prompt" bash "$sonic_script" "$@"
 }
 
 ran_action=false
+
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    install)
+      shift
+      [[ $# -eq 0 ]] || die "install does not accept extra arguments"
+      run_install
+      exit 0
+      ;;
+    sonic)
+      shift
+      run_sonic "$@"
+      exit 0
+      ;;
+    view)
+      shift
+      run_sonic view "$@"
+      exit 0
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      die "unknown command: $1"
+      ;;
+  esac
+fi
 
 info "RoboCollab"
 
