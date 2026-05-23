@@ -26,6 +26,19 @@ Identify the major modules, packages, services, apps, scripts, generated assets,
 
 Then record the most important relationships between nodes: imports, calls, reads, writes, serves, generates, configures, depends-on, or owns.
 
+## Granularity And Coherency
+
+Spend extra time after your initial inspection checking whether the graph is coherent at architecture-viewer scale. The graph should help a person understand the project, not enumerate the filesystem.
+
+- Prefer one box for an area with many files when those files serve one simple overarching purpose.
+- Create separate boxes only for units with meaningfully separate purposes: distinct apps, packages, CLIs, background workers, databases, cloud services, external APIs, grouped scripts, generated artifacts, schemas, or major user-facing screens/pages.
+- Balance architecture and user-facing surfaces. A simple blog app might have boxes for the main pages or screens, then those point to a node/server app box, which points to a database or cloud provider box.
+- Avoid making boxes for every component, helper, route file, utility, model, or folder unless that unit is a true architectural boundary.
+- Merge sibling areas that differ mostly by implementation detail but share one product or system purpose.
+- Split areas when they have separate inputs, outputs, deployment/runtime boundaries, data stores, cloud integrations, or user-facing workflows.
+- Prefer a smaller graph that explains the system well over a larger graph that looks mechanically complete.
+- Before returning JSON, review every node and ask: "Would this still deserve its own box in a diagram shown to a new engineer or product-minded stakeholder?" If not, merge it into a larger node.
+
 ## Output Schema
 
 Return JSON with this exact top-level shape:
@@ -79,10 +92,11 @@ Return JSON with this exact top-level shape:
 
 ## Output Rules
 
-- Include 5 to 20 nodes unless the project is genuinely smaller.
+- Include 4 to 14 nodes unless the project genuinely needs more or is smaller.
 - Use stable, lowercase, URL-safe node ids.
 - Keep labels short enough to fit in graph boxes.
 - Use relative file paths for `representativeFile` and `entrypoints`.
 - Every edge `source` and `target` must refer to an existing node id.
 - Prefer fewer high-signal edges over a dense import graph.
+- Choose edges that explain runtime, user-flow, data-flow, deployment, or ownership relationships.
 - If a field is unknown, use an empty string or empty array instead of inventing specifics.

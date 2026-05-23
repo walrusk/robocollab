@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # shellcheck disable=SC2016
-CODEX_SONIC_AI_CMD='out=$(mktemp); log=$(mktemp); if codex exec --skip-git-repo-check --ephemeral --sandbox read-only --color never -c approval_policy=\"never\" -c model_reasoning_effort=\"high\" --output-last-message "$out" - >"$log" 2>&1; then cat "$out"; rc=0; else rc=$?; cat "$log" >&2; fi; rm -f "$out" "$log"; exit $rc'
-CLAUDE_SONIC_AI_CMD='claude -p --no-session-persistence --permission-mode dontAsk --output-format text'
+CODEX_SONIC_AI_CMD='out=$(mktemp); log=$(mktemp); if codex exec --skip-git-repo-check --ephemeral --sandbox read-only --color never -c approval_policy=\"never\" -c model_reasoning_effort=\"xhigh\" --output-last-message "$out" - >"$log" 2>&1; then cat "$out"; rc=0; else rc=$?; cat "$log" >&2; fi; rm -f "$out" "$log"; exit $rc'
+CLAUDE_SONIC_AI_CMD='claude -p --no-session-persistence --permission-mode dontAsk --effort max --output-format text'
 DEFAULT_SONIC_AI_CMD="$CODEX_SONIC_AI_CMD"
 DEFAULT_PROMPT_URL="${SONIC_PROMPT_URL:-https://raw.githubusercontent.com/walrusk/robocollab/main/sonic/prompts/project-overview.md}"
 DEFAULT_VIEWER_ARCHIVE_URL="${SONIC_VIEWER_ARCHIVE_URL:-https://github.com/walrusk/robocollab/archive/refs/heads/main.tar.gz}"
@@ -90,6 +90,10 @@ read_config_ai_cmd() {
     fi
 
     [[ -n "$value" ]] || return 1
+    value="${value//model_reasoning_effort=\\\"high\\\"/model_reasoning_effort=\\\"xhigh\\\"}"
+    if [[ "$value" == claude\ * && "$value" != *"--effort "* ]]; then
+      value="${value//--output-format text/--effort max --output-format text}"
+    fi
     printf '%s\n' "$value"
     return 0
   done < "$config_file"

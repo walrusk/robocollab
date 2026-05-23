@@ -118,7 +118,9 @@ Read-only git (`status`, `diff`, `log`, `rev-parse`, etc.) is still fine where t
 
 Sonic is an early RoboCollab tool for generating and viewing a project overview graph. Run `robocollab` from a project directory and choose the Sonic option, or run `robocollab sonic` directly. The command downloads the latest Sonic bundle, then uses the user's existing Claude Code or Codex CLI subscription to inspect the project in read-only mode.
 
-Sonic writes `.sonic/project-map.json` by default. The JSON stays close to the agent's canonical graph output: `nodes` describe major project modules with representative files, inputs, outputs, and technologies; `edges` describe the most important relationships between them. The viewer may add a `view.positions` object to the same file so `@xyflow/react` can persist manually adjusted node positions without mixing renderer-specific fields into the module records.
+Sonic runs the selected agent CLI with its highest available effort setting by default: Codex uses `model_reasoning_effort="xhigh"` and Claude Code uses `--effort max`.
+
+Sonic writes `.sonic/project-map.json` by default. The JSON stays close to the agent's canonical graph output: `nodes` describe major purpose-level modules with representative files, inputs, outputs, and technologies; `edges` describe the most important runtime, user-flow, data-flow, deployment, or ownership relationships between them. The viewer may add a `view.positions` object to the same file so `@xyflow/react` can persist manually adjusted node positions without mixing renderer-specific fields into the module records.
 
 Run `robocollab view` or `./sonic/sonic.sh view` to start the prototype browser viewer. It runs the contained React/Node project in `sonic/viewer/`, serves the JSON store through a small Express API, and opens the local viewer URL. Useful options:
 
